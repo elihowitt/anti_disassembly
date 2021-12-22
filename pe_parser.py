@@ -115,13 +115,26 @@ def getCodeSections(codeStr, codeAddress, entryAddress, md):
                 split.startAddress = t.loc
                 split.endAddress = prevSection.endAddress
                 split.references.add(t.reference)
-                # TODO: binary search instructions (or save them in set) and split them.
+                split.connection = prevSection.connection
+
+                # TODO: binary search instructions (or save them in set) and split them. | I think it's done
                 #  and set new endAddress for prevSection.
                 #   prevSection | split
+                section_help = prevSection.instructions[:]
 
-                split.connection = prevSection.connection
+                index = 0
+                for i in range(len(section_help)):
+                    if section_help[i].address == t.loc:
+                        index = i
+                        break
+
+                prevSection.instructions = section_help[:index]
+                split.instructions = section_help[index:]
+
                 prevSection.connection = t.loc
                 sections.insert(t.loc, split)
+                sections[prevStart] = prevSection
+
 
             else:
                 isNewSection = True
