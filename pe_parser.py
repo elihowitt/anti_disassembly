@@ -86,7 +86,7 @@ def getCodeSections(codeStr, codeAddress, entryAddress, md):
         t = targets.pop()
 
         # TODO: check that target is in code section and not some imported function.
-        # TODONT: maybe this is enough for now -
+        # TODO NT: maybe this is enough for now -
         if t.loc < codeAddress or t.loc > lastAddress:
             continue
 
@@ -112,16 +112,20 @@ def getCodeSections(codeStr, codeAddress, entryAddress, md):
             prevStart, prevSection = sections.floor_item(t.loc)
             if t.loc <= prevSection.endAddress:     # Target mid-section
                 split = CodeSection()               # The second half of the section being split
+                split.startAddress = t.loc
                 split.endAddress = prevSection.endAddress
+                split.references.add(t.reference)
                 # TODO: binary search instructions (or save them in set) and split them.
                 #  and set new endAddress for prevSection.
+                #   prevSection | split
+
                 split.connection = prevSection.connection
                 prevSection.connection = t.loc
                 sections.insert(t.loc, split)
 
             else:
                 isNewSection = True
-                if t.loc > sections.max_key(): # Last condition checked if it was inside a section.
+                if t.loc > sections.max_key():  # Last condition checked if it was inside a section.
                     isLast = True
                 else:
                     comingAddress, comingSection = sections.ceil_key(t.loc)
@@ -137,23 +141,23 @@ def getCodeSections(codeStr, codeAddress, entryAddress, md):
                 if ins.mnemonic in controlFlowMnemonics:
 
                     # TODO: find targetAddress -
-                    # TODONT: does this work?
-                    targetAddress = int(ins.opstr, 16)
+                    # TODO NOT: does this work?
+                    targetAddress = int(ins.op_str, 16)  # look weird
 
                     if ins.mnemonic == 'jmp':
                         s.endAddress = ins.address
                         s.isInitialized = True
-                        targets.insert(Target(loc_ = targetAddress, reference_=ins.address))
+                        targets.insert(Target(loc_=targetAddress, reference_=ins.address))
 
-                    elif ins.mnemonic in controlFlowMnemonics:
+                    elif ins.mnemonic in conditionalJumpMnemonics:
                         s.endAddress = ins.address
                         s.isInitialized = True
                         targets.insert(Target(loc_=targetAddress, reference_=ins.address))
                         s.connection = loc + ins.size
-                        targets.insert(Target(loc_ = s.connection, reference_=ins.address))
+                        targets.insert(Target(loc_=s.connection, reference_=ins.address))
 
                     elif ins.mnemonic == 'call':
-                        targets.insert(Target(loc_ = targetAddress, reference_=ins.address))
+                        targets.insert(Target(loc_=targetAddress, reference_=ins.address))
                     else:       # 'ret'
                         s.endAddress = ins.address
                         s.isInitialized = True
@@ -170,23 +174,11 @@ def getCodeSections(codeStr, codeAddress, entryAddress, md):
                 else:
                     loc += ins.size  # Increment ;instruction pointer'
 
+    return sections
 
 
 
 
-
-
-
-
-# Is this function necessary when I can use md.disasm w\ count = 1?
-def getNextInstruction(code, md):
-    """
-    Given a code snippet returns the instruction starting at the beginning of said snippet.
-
-    :param code: code snippet to analyze.
-    :param md: capstone Cs object to disassemble with.
-    :return: instruction from beginning of code snippet.
-    """
 
 
 def main():
