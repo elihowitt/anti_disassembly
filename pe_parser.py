@@ -197,6 +197,11 @@ def getCodeSections(codeStr, codeAddress, entryAddress, md):
 def main():
     print('My main is name', end='\n')
 
+    loc = "./test_file.exe"
+
+    pe = pefile.PE(loc)
+    code = pe.sections[0].get_data()
+
     md = Cs(CS_ARCH_X86, CS_MODE_64)
 
 
