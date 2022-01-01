@@ -117,13 +117,14 @@ def functionInlining(fd : FileData):
 
                             tmpSec.data[newName] = dataValue
 
-                            for funcLine in tmpFuncLines:
-                                funcLine = swapNames(line = funcLine, oldName = dataName, newName = newName)
+                            tmpFuncLines = [swapNames(line = funcLine, oldName = dataName, newName = newName) for funcLine in tmpFuncLines]
 
                         # Insert function:
                         tmpProcLines.append(tmpFuncLines)
                         # TODO: fix issue with 'return' command in inlined function code
                         #  also, I like how TODOs are yellow so I added another comment here
+                    else:
+                        tmpProcLines.append(line)
                 else:
                     tmpProcLines.append(line)
 
@@ -132,7 +133,7 @@ def functionInlining(fd : FileData):
         tmpFileData.texts.append(tmpSec)
         index = len(tmpFileData.texts) - 1
         for funcName in tmpFunctions:
-            tmpFileData.functions[funcName] = index
+            tmpFileData.functions[funcName] = [True, index]
 
     # TODO: sort other parts of file data e.g. other sections.
     return tmpFileData
