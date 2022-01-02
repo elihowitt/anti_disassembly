@@ -53,7 +53,6 @@ def increaseName(name: str) -> str:
 
 
 def swapNames(line, oldName, newName):
-    # TODO: implement this function.
     """
         Utility function to replace old names with new ones in a line of code.
 
@@ -63,8 +62,25 @@ def swapNames(line, oldName, newName):
 
     returns: the line after the swaps (if any)
     """
+    i = line.find(oldName)
+    newLine = ''
+    while i != -1:
+        i = line.find(oldName)
+        if i > 0 and line[i - 1] == ' ' or line[i - 1] == ',':
+            length = len(oldName)
+            if len(line) == length + i + 1 or line[i + length] == ' ' or line[i + length] == ',':
+                newLine += line[:i] + newName
+                line = line[i + length:]
+            else:
+                newLine += line[:1]
+                line = line[1:]
+        else:
+            newLine += line[:1]
+            line = line[1:]
 
-    pass
+    newLine += line[:]
+    return newLine
+
 
 def functionInlining(fd : FileData):
     '''
