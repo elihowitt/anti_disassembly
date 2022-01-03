@@ -14,11 +14,14 @@ class FileData:
         processes = dict()  # Dictionary of processes in segment in form [name: lines]
         labels = [str]      # Array of labels used in this specific text segment (as opposed to labels in 'FileData')
 
-    def __init__(self, file):
+    def __init__(self, file = None):
 
         """
         Constructor of 'FileData' object given file. Uses 'initialize' to parse the file contents.
         """
+
+        if file is None:
+            return
 
         lines = []
         with open(file) as f:
@@ -26,7 +29,7 @@ class FileData:
             lines = [line.split() for line in f.read().splitlines() if
                      len(line) != 0 and len(line.split()) != 0 and line[0] != ';']
 
-        self.intialize(lines)
+        self.initialize(lines)
 
     def initialize(self, lines: [[str]]):
         """
@@ -330,18 +333,18 @@ class Techniques:
 
 
         # Setting methods for each technique and its name:
-        self.namedFunctions['functionInlining'] = [applies_functionInlining, functionInlining]
+        self.namedFunctions__['functionInlining'] = [applies_functionInlining, functionInlining]
             # self.namedFunctions['technique1'] = [applies_technique1, funcTechnique1]
             # self.namedFunctions['technique2'] = [applies_technique2, funcTechnique2]
 
 
         # Ordering methods: (in this example [technique1 -> function inlining -> technique2])
         # self.techniqueOrder.append('technique1')
-        self.techniqueOrder.append('functionInlining')
+        self.techniqueOrder__.append('functionInlining')
         # self.techniqueOrder.append('technique2'')
 
-        for t in self.techniqueOrder:
-            applies, func = self.namedFunctions[t]
+        for t in self.techniqueOrder__:
+            applies, func = self.namedFunctions__[t]
             if applies:
                 self.techniqueFunctions.append(func)
 
