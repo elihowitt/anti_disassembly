@@ -1,16 +1,6 @@
 
 from typing import List     # Used for type hinting
-
-
-# A class encapsulating the information in a 'text' segment
-class TextSegment:
-    def __init__(self):
-        """Default constructor"""
-
-        self.data = dict()              # Dictionary of data inside segment, each element in form of [name: value]
-        self.processes = dict()         # Dictionary of processes in segment in form [name: lines]
-        self.labels: List[str] = []     # Array of labels used in this specific text segment-
-                                        # (as opposed to labels in 'FileData')
+import copy                 # Used for non reference copies (shallow & deep)
 
 
 # A class encapsulating the information in a compiled c file (.asm).
@@ -18,6 +8,16 @@ class FileData:
 
     # In this class when the term 'line(s)' is used the meaning is
     #   an array of strings originally separated by whitespace.
+
+    # A class encapsulating the information in a 'text' segment
+    class TextSegment:
+        def __init__(self):
+            """Default constructor"""
+
+            self.data = dict()  # Dictionary of data inside segment, each element in form of [name: value]
+            self.processes = dict()  # Dictionary of processes in segment in form [name: lines]
+            self.labels: List[str] = []  # Array of labels used in this specific text segment-
+            # (as opposed to labels in 'FileData')
 
     def __init__(self, file = None):
 
@@ -45,7 +45,7 @@ class FileData:
                                  # corresponding parent 'TextSegment' objects index in 'textSegments' array
 
         self.data: List[str] = []                    # Array of lines belonging to data segments
-        self.textSegments: List[TextSegment] = []    # Array of text segments in file
+        self.textSegments: List[FileData.TextSegment] = []    # Array of text segments in file
         self.miscSegments = dict()                   # Dictionary of miscellaneous segments [name:lines]
         self.segmentlessLines: List[str] = []    # Array of all the lines (typically in the beginning of the file)-
                                                  # belonging to no particular segemnt
@@ -83,7 +83,7 @@ class FileData:
                     currSegment = line[0]
 
                     if currSegment == '_TEXT':                  # Start of text segment
-                        self.textSegments.append(TextSegment())
+                        self.textSegments.append(FileData.TextSegment())
                         textSegmentIdx += 1
                 else:
                     self.segmentlessLines.append(line)
@@ -208,24 +208,24 @@ def swapNames(line, oldName, newName):
 
     returns: the line after the swaps (if any)
     """
+
+    neighbors = ['+', '[', ']', ',', ' ']
+
+    length = len(oldName)
+    line = ' '.join(line)
     i = line.find(oldName)
     newLine = ''
     while i != -1:
-        i = line.find(oldName)
-        if i > 0 and line[i - 1] == ' ' or line[i - 1] == ',':
-            length = len(oldName)
-            if len(line) == length + i + 1 or line[i + length] == ' ' or line[i + length] == ',':
-                newLine += line[:i] + newName
-                line = line[i + length:]
-            else:
-                newLine += line[:1]
-                line = line[1:]
+        if i > 0 and line[i-1] in neighbors and line[i+length] in neighbors:
+            newLine += line[:i] + newName
+            line = line[i + length:]
         else:
-            newLine += line[:1]
-            line = line[1:]
+            newLine += line[:i+length]
+            line = line[i+length:]
+        i = line.find(oldName)
 
     newLine += line[:]
-    return newLine
+    return newLine.split()
 
 
 def swapLabels(line, oldName, newName):
@@ -257,12 +257,13 @@ def functionInlining(fd : FileData) -> FileData:
 
     tmpFileData = FileData()
     tmpFileData.labels = fd.labels[:]
-    tmpFileData.miscSegments = fd.miscSegments[:]
+    tmpFileData.miscSegments = copy.deepcopy(fd.miscSegments)
     tmpFileData.segmentlessLines = fd.segmentlessLines[:]
+    tmpFileData.data = copy.deepcopy(fd.data)
 
     for t in fd.textSegments:
         tmpSeg = FileData.TextSegment()        # Temporary segment for storing changes
-        tmpSeg.data = t.data[:]
+        tmpSeg.data = copy.deepcopy(t.data)
         tmpSeg.labels = t.labels[:]
 
         tmpFunctions = []       # Array of functions processed in current segment, used to fix 'functions' dict
@@ -274,7 +275,7 @@ def functionInlining(fd : FileData) -> FileData:
                 if line[0] == 'call':                       # Calling another function which we might inline
                     funcName = line[1]
                     if funcName in fd.functions:            # If function is defined locally then we can inline it
-                        funcSeg = fd.textSegments[funcName]
+                        funcSeg = fd.textSegments[fd.functions[funcName]]
                         funcLines = funcSeg.processes[funcName]
                         tmpFuncLines = funcLines[:]         # Temporary array for storing lines after alterations
 
@@ -303,11 +304,19 @@ def functionInlining(fd : FileData) -> FileData:
                         while newName in tmpFileData.labels:
                             newName = increaseName(newName)
 
-                        tmpFuncLines2 = []
+                        tmpSeg.labels.append(newName)
+                        tmpFileData.labels.append(newName)
+
+                        isCallerCleanUp: bool = False   # Whether the callee is cleaning the stack.
+                                                        # We assume {ret imm} form indicates such a convention.
+
+                        tmpFuncLines2 = [['sub', 'esp,', '4']]   # Adding a stub in place of {push eip} of call
                         for funcLine in tmpFuncLines:
                             if funcLine[0] == 'ret':
-                                if len(funcLine) == 2:          # E.g. 'ret 8' <=> {return and pop 8 bytes from stack}
-                                    tmpFuncLines2.append(['add', 'esp', funcLine[1]])
+                                if len(funcLine) == 2 and funcLine[1] != '0':
+                                    # E.g. 'ret 8' <=> {return and pop 8 bytes from stack}
+                                    tmpFuncLines2.append(['add', 'esp,', funcLine[1]])
+                                    isCallerCleanUp = True
                                 tmpFuncLines2.append(['jmp', newName])
                             else:
                                 tmpFuncLines2.append(funcLine)
@@ -315,7 +324,9 @@ def functionInlining(fd : FileData) -> FileData:
                         tmpFuncLines2.append([newName+':'])     # The label itself
 
                         # Insert function:
-                        tmpProcLines.append(tmpFuncLines2)
+                        tmpProcLines.extend(tmpFuncLines2)
+                        if not isCallerCleanUp:                 # Removing stub {pop eip} of ret
+                            tmpProcLines.append(['add', 'esp,', '4'])
 
                         # TODO: make sure code works on all frameworks. E.g. 'esp' might not be correct for non x32's.
                         #   Alternatively we can decide if we want to restrict the code to a specific framework-
@@ -405,7 +416,7 @@ def main():
     print("\nEnter location to which the file would be saved after applying said change(s): ")
     newLocation = input()
 
-    techniques = Techniques(applies_functionInlining=False)
+    techniques = Techniques(applies_functionInlining=True)
     applyTechniques(location, newLocation, techniques)
 
 
