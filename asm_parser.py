@@ -100,7 +100,10 @@ class FileData:
                         inProcess = False
                         processName = None
                     else:
-                        self.textSegments[textSegmentIdx].processes[processName].append(line)
+
+                        self.textSegments[textSegmentIdx].processes[processName].append(
+                            [part for part in line if part != 'SHORT']
+                        )
                         if len(line) == 1 and line[0][-1:] == ':':  # A label
                             labelName = line[0][:-1]
                             self.textSegments[textSegmentIdx].labels.append(labelName)
@@ -240,6 +243,7 @@ def swapLabels(line, oldName, newName):
     """
 
     if len(line) != 1:          # Too many or too few parts to be a label
+        line = [(newName if part == oldName else part) for part in line]#    if part != 'SHORT']
         return line
 
     if line[0][-1:] != ':':     # Incorrect format for a label line
@@ -248,6 +252,7 @@ def swapLabels(line, oldName, newName):
     if line[0][:-1] == oldName:
         return [newName + ':']
 
+    return line
 
 def functionInlining(fd : FileData) -> FileData:
 
@@ -291,7 +296,7 @@ def functionInlining(fd : FileData) -> FileData:
 
                         # Fix label conflicts:
                         for label in funcSeg.labels:
-                            newName = label
+                            newName = tmpFileData.labels[len(tmpFileData.labels)-1]
                             while newName in tmpFileData.labels:
                                 newName = increaseName(newName)
 
@@ -341,7 +346,7 @@ def functionInlining(fd : FileData) -> FileData:
         tmpFileData.textSegments.append(tmpSeg)
         index = len(tmpFileData.textSegments) - 1
         for funcName in tmpFunctions:
-            tmpFileData.functions[funcName] = [True, index]
+            tmpFileData.functions[funcName] = index
 
     return tmpFileData
 
@@ -364,6 +369,12 @@ class Techniques:
         # Techniques 'technique1' and 'technique2' are added here as comments-
         # to indicate the intended implementation of class should there be more techniques
 
+        # Number of times to repeat each technique:
+        repeat_functionInlining = 2     # >3 takes time even with small programs-
+                                        # number of calls increases in fashion a(n+1) = a(n)^2 <=> a(n) = a(0)^(2^n))!
+        # repeat_technique1 = 1
+        # repeat_technique2 = 4
+
         # Variable initialization:
         self.techniqueOrder__ = []      # Array of names of techniques ordered correctly
         self.namedFunctions__ = dict()  # Dictionary mapping names of techniques to [isApplied, func]-
@@ -381,13 +392,14 @@ class Techniques:
 
         # Ordering methods: (in this example [technique1 -> function inlining -> technique2])
         # self.techniqueOrder.append('technique1')
-        self.techniqueOrder__.append('functionInlining')
+        self.techniqueOrder__.extend(['functionInlining'] * repeat_functionInlining)
         # self.techniqueOrder.append('technique2'')
 
         for t in self.techniqueOrder__:
             applies, func = self.namedFunctions__[t]
             if applies:
                 self.techniqueFunctions.append(func)
+
 
 
 def applyTechniques(file: str, newLocation: str, techniques: Techniques):
