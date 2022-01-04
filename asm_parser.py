@@ -1,18 +1,23 @@
 
+from typing import List     # Used for type hinting
+
+
+# A class encapsulating the information in a 'text' segment
+class TextSegment:
+    def __init__(self):
+        """Default constructor"""
+
+        self.data = dict()              # Dictionary of data inside segment, each element in form of [name: value]
+        self.processes = dict()         # Dictionary of processes in segment in form [name: lines]
+        self.labels: List[str] = []     # Array of labels used in this specific text segment-
+                                        # (as opposed to labels in 'FileData')
+
+
 # A class encapsulating the information in a compiled c file (.asm).
 class FileData:
 
     # In this class when the term 'line(s)' is used the meaning is
     #   an array of strings originally separated by whitespace.
-
-    # A class encapsulating the information in a 'text' segment
-    class TextSegment:
-
-        # data = []          # Array of lines of data in segment
-
-        data = dict()       # Dictionary of data inside segment, each element in form of [(str)name: (str)value]
-        processes = dict()  # Dictionary of processes in segment in form [name: lines]
-        labels = [str]      # Array of labels used in this specific text segment (as opposed to labels in 'FileData')
 
     def __init__(self, file = None):
 
@@ -20,13 +25,41 @@ class FileData:
         Constructor of 'FileData' object given file. Uses 'initialize' to parse the file contents.
         """
 
+        def cutComments(line: [str]):
+            """
+                Utility function for cutting right-trailing comments of lines
+                Assumes ';' of comments would be separated by whitespace, and-
+                Assumes no ';' exists in contexts other than comments (suc as string)
+            """
+            # TODO: fix 2nd assumption of function
+
+            res = []
+            for part in line:
+                if part != ';':
+                    res.append(part)
+                else:
+                    break
+            return res
+
+        self.functions = dict()  # Dictionary mapping function names to
+                                 # corresponding parent 'TextSegment' objects index in 'textSegments' array
+
+        self.data: List[str] = []                    # Array of lines belonging to data segments
+        self.textSegments: List[TextSegment] = []    # Array of text segments in file
+        self.miscSegments = dict()                   # Dictionary of miscellaneous segments [name:lines]
+        self.segmentlessLines: List[str] = []    # Array of all the lines (typically in the beginning of the file)-
+                                                 # belonging to no particular segemnt
+
+        self.labels: List[str] = []  # Array of labels used in entire file (as opposed to labels in 'TextSegment')
+
         if file is None:
             return
 
         lines = []
         with open(file) as f:
             # Sanitize empty lines and comments
-            lines = [line.split() for line in f.read().splitlines() if
+            lines = [cutComments(line.split())
+                     for line in f.read().splitlines() if
                      len(line) != 0 and len(line.split()) != 0 and line[0] != ';']
 
         self.initialize(lines)
@@ -50,7 +83,7 @@ class FileData:
                     currSegment = line[0]
 
                     if currSegment == '_TEXT':                  # Start of text segment
-                        self.textSegments.append(self.TextSegment())
+                        self.textSegments.append(TextSegment())
                         textSegmentIdx += 1
                 else:
                     self.segmentlessLines.append(line)
@@ -69,9 +102,9 @@ class FileData:
                     else:
                         self.textSegments[textSegmentIdx].processes[processName].append(line)
                         if len(line) == 1 and line[0][-1:] == ':':  # A label
-                            name = line[0][:-1]
-                            self.textSegments[textSegmentIdx].labels.append(name)
-                            self.labels.append(name)
+                            labelName = line[0][:-1]
+                            self.textSegments[textSegmentIdx].labels.append(labelName)
+                            self.labels.append(labelName)
 
                 else:                                               # Not inside process
                     if line == ['_TEXT', 'ENDS']:                   # End of text segment
@@ -102,12 +135,12 @@ class FileData:
         # Adding miscellaneous segments:
         for name, miscLines in self.miscSegments.items():
             lines.append([name, 'SEGMENT'])
-            lines.append(miscLines)
+            lines.extend(miscLines)
             lines.append([name, 'ENDS'])
 
         # Adding data segment:
         lines.append(['_DATA', 'SEGMENT'])
-        lines.append(self.data)
+        lines.extend(self.data)
         lines.append(['_DATA', 'ENDS'])
 
         # Adding text segments:
@@ -121,7 +154,7 @@ class FileData:
             # Adding text section processes:
             for procName, procLines in ts.processes.items():
                 lines.append([procName, 'PROC'])
-                lines.append(procLines)
+                lines.extend(procLines)
                 lines.append([procName, 'ENDP'])
 
             lines.append(['_TEXT', 'ENDS'])
@@ -137,17 +170,6 @@ class FileData:
                 for word in line:
                     file.write(word + ' ')
                 file.write('\n')
-
-    functions = dict()  # Dictionary mapping function names to
-                        # corresponding parent 'TextSegment' objects index in 'textSegments' array
-
-    data = [[str]]                  # Array of lines belonging to data segments
-    textSegments = [TextSegment]    # Array of text segment information in form of 'TextSegment' objects
-    labels = [str]                  # Array of labels used in entire file (as opposed to labels in 'TextSegment')
-
-    miscSegments = dict()           # Dictionary of miscellaneous segments [name:lines]
-    segmentlessLines = [str]        # Array of all the lines (typically in the beginning of the file)-
-                                    # belonging to no particular segemnt
 
 
 # Utility function for changing names to avoid conflicts
@@ -331,6 +353,14 @@ class Techniques:
         # Techniques 'technique1' and 'technique2' are added here as comments-
         # to indicate the intended implementation of class should there be more techniques
 
+        # Variable initialization:
+        self.techniqueOrder__ = []      # Array of names of techniques ordered correctly
+        self.namedFunctions__ = dict()  # Dictionary mapping names of techniques to [isApplied, func]-
+                                        # the former is a flag wether the technique is applied or not, and
+                                        # the latter the function of corresponding technique
+
+        self.techniqueFunctions = []    # Array of functions of techniques sorted in correct order
+
 
         # Setting methods for each technique and its name:
         self.namedFunctions__['functionInlining'] = [applies_functionInlining, functionInlining]
@@ -347,12 +377,6 @@ class Techniques:
             applies, func = self.namedFunctions__[t]
             if applies:
                 self.techniqueFunctions.append(func)
-
-    techniqueFunctions = []
-
-    namedFunctions__ = dict()
-
-    techniqueOrder__ = []
 
 
 def applyTechniques(file: str, newLocation: str, techniques: Techniques):
@@ -381,7 +405,7 @@ def main():
     print("\nEnter location to which the file would be saved after applying said change(s): ")
     newLocation = input()
 
-    techniques = Techniques(applies_functionInlining=True)
+    techniques = Techniques(applies_functionInlining=False)
     applyTechniques(location, newLocation, techniques)
 
 
