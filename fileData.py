@@ -85,35 +85,60 @@ class FileData:
                     arg2 = FileData.TextSegment.Instruction.Argument(linePart2)
                     if ins == 'mov':
                         if arg1.isPointer:
-                            self.changeAll() # TODO: is this assumption too strict?
+                            self.changes[self.MEM] = True
                             for unit in arg1.includes:
                                 self.uses[unit] = True
                         else:
-                            self.changes[arg1.includes[0]] = True
-
-                        if arg2.isPointer:
-                            self.useAll() # TODO: is this assumption too strict?
-                            for unit in arg2.includes:
-                                self.uses[unit] = True
-                        else:
-                            self.uses[arg1.includes[0]] = True
-
-                    elif ins == 'add':
-                        if arg1.isPointer:
-                            self.changeAll()  # TODO: is this assumption too strict?
                             for unit in arg1.includes:
-                                self.uses[unit] = True
                                 self.changes[unit] = True
 
-                        else:
-                            self.changes[arg1.includes[0]] = True
-
                         if arg2.isPointer:
-                            self.useAll()  # TODO: is this assumption too strict?
+                            self.uses[self.MEM] = True
                             for unit in arg2.includes:
                                 self.uses[unit] = True
                         else:
-                            self.uses[arg1.includes[0]] = True
+                            for unit in arg1.includes:
+                                self.uses[unit] = True
+
+                    elif ins == 'add' or ins == 'sub' or ins == 'xor':
+                        if arg1.isPointer:
+                            self.changes[self.MEM] = True
+                            self.uses[self.MEM] = True
+                            for unit in arg1.includes:
+                                self.uses[unit] = True
+                        else:
+                            for unit in arg1.includes:
+                                self.changes[unit] = True
+                                self.uses[unit] = True
+
+                        if arg2.isPointer:
+                            self.uses[self.MEM] = True
+                            for unit in arg2.includes:
+                                self.uses[unit] = True
+                        else:
+                            for unit in arg1.includes:
+                                self.uses[unit] = True
+
+                    elif ins == 'cmp':
+                        self.uses[self.CF_IDX] = True
+                        self.uses[self.ZF_IDX] = True
+                        self.uses[self.SF_IDX] = True
+                        self.uses[self.OF_IDX] = True
+                        if arg1.isPointer:
+                            self.uses[self.MEM] = True
+                            for unit in arg1.includes:
+                                self.uses[unit] = True
+                        else:
+                            for unit in arg1.includes:
+                                self.uses[unit] = True
+
+                        if arg2.isPointer:
+                            self.uses[self.MEM] = True
+                            for unit in arg2.includes:
+                                self.uses[unit] = True
+                        else:
+                            for unit in arg1.includes:
+                                self.uses[unit] = True
 
                     # ... for all instructions in INSTRUCTIONS_TWO_ARGS.
 
@@ -145,7 +170,7 @@ class FileData:
                 'loop', 'loope', 'loopne', 'loopnz', 'loopz']
 
             # Number of registers (or other memory units we may track):
-            NUM_UNITS = 22
+            NUM_UNITS = 23
 
             # Register indices:
             RAX_IDX = 0
@@ -172,6 +197,9 @@ class FileData:
             ZF_IDX = 19
             SF_IDX = 20
             OF_IDX = 21
+
+            # Memory (stack)
+            MEM = 22
 
             # Dictionary mapping register index to portion names:
             registerNames = dict()
