@@ -14,6 +14,50 @@ class FileData:
 
         # A class representing the information about an x86 assembly instruction in x64 architecture
         class Instruction:
+
+            # A class representing the properties of an argument in an instruction
+            class Argument:
+                def __init__(self, arg: str):
+                    self.isPointer: bool = False    # Whether argument is of pointer type
+                    self.includes: List[int] = []   # Array of indices of registers included in argument
+
+                    # TODO: correctly implement this!
+                    # Parse argument:
+                    if 'PTR' in arg:
+                        self.isPointer = True
+                        address = arg[arg.rfind('['): arg.rfind(']') + 1]
+                        # TODO: loop trough *all* brackets.
+                        validNeighbors = ['[', '+', '-', '*', ']', ' ']
+                        for unitIdx, names in FileData.TextSegment.Instruction.registerNames.items():
+                            for name in names:
+                                nameLen = len(name)
+                                appearanceIdx = address.find(name)
+                                while appearanceIdx != -1:
+                                    if appearanceIdx > 0 and \
+                                        address[appearanceIdx-1] in validNeighbors and \
+                                        address[appearanceIdx+nameLen] in validNeighbors:
+
+                                        self.includes.append(unitIdx)
+                                        break
+                                if unitIdx in self.includes:
+                                    break
+
+                    else:
+                        # TODO: loop trough *all* brackets.
+                        validNeighbors = ['[', '+', '-', '*', ']', ' ']
+                        for unitIdx, names in FileData.TextSegment.Instruction.registerNames.items():
+                            for name in names:
+                                nameLen = len(name)
+                                appearanceIdx = arg.find(name)
+                                while appearanceIdx != -1:
+                                    if appearanceIdx > 0 and \
+                                            arg[appearanceIdx - 1] in validNeighbors and \
+                                            arg[appearanceIdx + nameLen] in validNeighbors:
+                                        self.includes.append(unitIdx)
+                                        break
+                                if unitIdx in self.includes:
+                                    break
+
             def __init__(self, line):
                 self.line = copy.deepcopy(line)
                 self.changes = [False for _ in range(FileData.TextSegment.Instruction.NUM_UNITS)]
@@ -25,75 +69,44 @@ class FileData:
                     return
 
                 ins = line[0]
-                if ins == 'mov':
-                    arg1, arg2 = (' '.join(line[1:])).split(',', 1)
 
-                    if arg1.find('PTR') != -1:  # Pointer to memory
-                        address = arg1[arg1.rfind('['): arg1.rfind(']')+1]
-                        validNeighbors = ['[', '+', '-', '*', ']', ' ']
-                        for unitIdx, names in FileData.TextSegment.Instruction.registerNames.items():
-                            for name in names:
-                                nameLen = len(name)
-                                appearanceIdx = address.find(name)
-                                while appearanceIdx != -1:
-                                    if appearanceIdx > 0 and \
-                                        address[appearanceIdx-1] in validNeighbors and \
-                                        address[appearanceIdx+nameLen] in validNeighbors:
+                if ins in FileData.TextSegment.Instruction.CONTROL_FLOW_MNEMONICS:
+                    self.changeAll()
+                    self.useAll()
 
-                                        self.uses[unitIdx] = True
-                                        break
+                elif ins in FileData.TextSegment.Instruction.INSTRUCTIONS_NO_ARGS:
+                    pass
 
-                                    appearanceIdx = address.find(name, appearanceIdx+nameLen) # Find next appearance
+                elif ins in FileData.TextSegment.Instruction.INSTRUCTIONS_ONE_ARGS:
+                    arg = FileData.TextSegment.Instruction.Argument(' '.join(line[1:]))
+                    pass
 
-                                if self.uses[unitIdx]:
-                                    break
+                elif ins in FileData.TextSegment.Instruction.INSTRUCTIONS_TWO_ARGS:
+                    linePart1, linePart2 = (' '.join(line[1:])).split(',')
+                    arg1 = FileData.TextSegment.Instruction.Argument(linePart1)
+                    arg2 = FileData.TextSegment.Instruction.Argument(linePart2)
+                    if ins == 'mov':
+                        if arg1.isPointer:
+                            self.changeAll() # TODO: is this assumption too strict?
+                            for unit in arg1.includes:
+                                self.uses[unit] = True
+                        else:
+                            self.changes[arg1.includes[0]] = True
 
-                        self.changeAll() # During memory assignment we assume we change everything
+                        if arg2.isPointer:
+                            self.useAll() # TODO: is this assumption too strict?
+                            for unit in arg2.includes:
+                                self.uses[unit] = True
+                        else:
+                            self.uses[arg1.includes[0]] = True
 
-                    else:
-                        found = False
-                        for unitIdx, names in FileData.TextSegment.Instruction.registerNames.items():
-                            for name in names:
-                                if name in arg1:
-                                    self.changes[unitIdx] = True
-                                    found = True
-                                    break
-                            if found:
-                                break
+                    elif ins == 'add':
+                        pass
+                    # ... for all instructions in INSTRUCTIONS_TWO_ARGS.
 
-                    if arg2.find('PTR') != -1:  # Pointer to memory
-                        address = arg1[arg1.rfind('['): arg1.rfind(']') + 1]
-                        validNeighbors = ['[', '+', '-', '*', ']', ' ']
-                        for unitIdx, names in FileData.TextSegment.Instruction.registerNames.items():
-                            for name in names:
-                                nameLen = len(name)
-                                appearanceIdx = address.find(name)
-                                while appearanceIdx != -1:
-                                    if appearanceIdx > 0 and \
-                                            address[appearanceIdx - 1] in validNeighbors and \
-                                            address[appearanceIdx + nameLen] in validNeighbors:
-                                        self.uses[unitIdx] = True
-                                        break
-
-                                    appearanceIdx = address.find(name, appearanceIdx + nameLen)  # Find next appearance
-
-                                if self.uses[unitIdx]:
-                                    break
-
-                        self.useAll()  # During memory reading we assume we use everything
-
-                    else:
-                        found = False
-                        for unitIdx, names in FileData.TextSegment.Instruction.registerNames.items():
-                            for name in names:
-                                if name in arg1:
-                                    self.uses[unitIdx] = True
-                                    found = True
-                                    break
-                            if found:
-                                break
-
-                    # Change flags if necessary. In move no flags are changed or used.
+                else:   # unsupported instruction, assume 'the worst'.
+                    self.changeAll()
+                    self.useAll()
 
             def changeAll(self):
                 # Utility methode for assigning true to all flags of change.
@@ -106,6 +119,11 @@ class FileData:
                 # Useful for instructions which we assume uses everything like calling another function.
                 for i in range(FileData.TextSegment.Instruction.NUM_UNITS):
                     self.uses[i] = True
+
+            # Arrays of instructions grouped by amount og arguments they take:
+            INSTRUCTIONS_NO_ARGS = ['cdq']
+            INSTRUCTIONS_ONE_ARG = ['pop', 'push']
+            INSTRUCTIONS_TWO_ARG = ['mov', 'add', 'sub', 'mul', 'imul', 'lea', 'xor', 'cmp', 'shl', 'shr']
 
             # Array of control flow instruction mnemonics we assume change and use everything:
             CONTROL_FLOW_MNEMONICS = [
@@ -314,9 +332,9 @@ class FileData:
                 lines.append([dataName, '=', dataValue])
 
             # Adding text section processes:
-            for procName, procLines in ts.processes.items():
+            for procName, procInstructions in ts.processes.items():
                 lines.append([procName, 'PROC'])
-                lines.extend(procLines)
+                lines.extend([ins.line for ins in procInstructions])
                 lines.append([procName, 'ENDP'])
 
             lines.append(['_TEXT', 'ENDS'])
@@ -335,7 +353,7 @@ class FileData:
 
 
 # Utility function for changing names to avoid conflicts
-def increaseName(name: str) -> str:
+def increaseName(name: str, boost=1) -> str:
     l = len(name)
     if l == 0:
         return '0'
@@ -357,7 +375,7 @@ def increaseName(name: str) -> str:
         num *= 10
         num += ord(j) - ord('0')
 
-    return name[:l - i] + str(num+1)
+    return name[:l - i] + str(num+boost)
 
 
 def swapNames(line, oldName, newName):
@@ -413,6 +431,7 @@ def swapLabels(line, oldName, newName):
 
     return line
 
+
 def functionInlining(fd : FileData) -> FileData:
 
     """
@@ -434,34 +453,31 @@ def functionInlining(fd : FileData) -> FileData:
 
         for procName, procInstructions in t.processes.items():
             tmpFunctions.append(procName)
-            tmpProcInstructions = []
+            tmpProcLines = []
             for instruction in procInstructions:
                 line = instruction.line
                 if line[0] == 'call':                       # Calling another function which we might inline
                     funcName = line[1]
                     if funcName in fd.functions:            # If function is defined locally then we can inline it
                         funcSeg = fd.textSegments[fd.functions[funcName]]
-                        funcInstructions = funcSeg.processes[funcName]
-
-                        # Temporary array for storing instructions after alterations
-                        tmpFuncinstructions = funcInstructions[:]
+                        funcLines = [ins.line for ins in funcSeg.processes[funcName]]
+                        tmpFuncLines = funcLines[:]         # Temporary array for storing lines after alterations
 
                         # Insert data:
                         for dataName, dataValue in funcSeg.data.items():
                             newName = dataName
-                            while newName in tmpSeg.data:   # Name conflict
-                                newName = increaseName(newName)
+                            isChanged = False
+                            if newName in tmpSeg.data:
+                                isChanged = True
+                                newName = increaseName(newName, len(tmpSeg.data.keys())-1)  # Trying to avoid conflict
+                                while newName in tmpSeg.data:   # Name conflict
+                                    newName = increaseName(newName)
 
                             tmpSeg.data[newName] = dataValue
 
-                            tmpFuncinstructions = \
-                                [
-                                    FileData.TextSegment.Instruction
-                                    (
-                                        swapNames(line = funcIns.line, oldName = dataName, newName = newName)
-                                    )
-                                    for funcIns in tmpFuncinstructions
-                                ]
+                            if isChanged:
+                                tmpFuncLines = [swapNames(line = funcLine, oldName = dataName, newName = newName)
+                                                for funcLine in tmpFuncLines]
 
                         # Fix label conflicts:
                         for label in funcSeg.labels:
@@ -471,14 +487,8 @@ def functionInlining(fd : FileData) -> FileData:
 
                             tmpSeg.labels.append(newName)
                             tmpFileData.labels.append(newName)
-                            tmpFuncinstructions = \
-                                [
-                                    FileData.TextSegment.Instruction
-                                    (
-                                        swapLabels(line = funcIns.line, oldName = label, newName = newName)
-                                    )
-                                    for funcIns in tmpFuncinstructions
-                                ]
+                            tmpFuncLines = [swapLabels(line = funcLine, oldName = label, newName = newName)
+                                            for funcLine in tmpFuncLines]
 
                         # Remove return lines:
                         newName = 'Co01Secr3tLabel' if len(tmpFileData.labels) == 0 else tmpFileData.labels[0]
@@ -491,38 +501,30 @@ def functionInlining(fd : FileData) -> FileData:
                         isCallerCleanUp: bool = False   # Whether the callee is cleaning the stack.
                                                         # We assume {ret imm} form indicates such a convention.
 
-                        # Adding a stub in place of {push eip} of call
-                        tmpFuncinstructions2 = [FileData.TextSegment.Instruction(['sub', 'esp,', '4'])]
-                        for funcIns in tmpFuncinstructions:
-                            funcLine = funcIns.line
+                        tmpFuncLines2 = [['sub', 'rsp,', '4']]   # Adding a stub in place of {push eip} of call
+                        for funcLine in tmpFuncLines:
                             if funcLine[0] == 'ret':
                                 if len(funcLine) == 2 and funcLine[1] != '0':
                                     # E.g. 'ret 8' <=> {return and pop 8 bytes from stack}
-                                    tmpFuncinstructions2.append(
-                                        FileData.TextSegment.Instruction(['add', 'esp,', funcLine[1]]))
-
+                                    tmpFuncLines2.append(['add', 'rsp,', funcLine[1]])
                                     isCallerCleanUp = True
-                                tmpFuncinstructions2.append(FileData.TextSegment.Instruction(['jmp', newName]))
+                                tmpFuncLines2.append(['jmp', newName])
                             else:
-                                tmpFuncinstructions2.append(funcIns)
+                                tmpFuncLines2.append(funcLine)
 
-                        # End-of-inline label
-                        tmpFuncinstructions2.append(FileData.TextSegment.Instruction([newName+':']))
+                        tmpFuncLines2.append([newName+':'])     # The label itself
 
                         # Insert function:
-                        tmpProcInstructions.extend(tmpFuncinstructions2)
+                        tmpProcLines.extend(tmpFuncLines2)
                         if not isCallerCleanUp:                 # Removing stub {pop eip} of ret
-                            tmpProcInstructions.append(FileData.TextSegment.Instruction(['add', 'esp,', '4']))
+                            tmpProcLines.append(['add', 'rsp,', '4'])
 
-                        # TODO: make sure code works on all frameworks. E.g. 'esp' might not be correct for non x32's.
-                        #   Alternatively we can decide if we want to restrict the code to a specific framework-
-                        #   I think prof might have said something about x64, needs checking.
                     else:
-                        tmpProcInstructions.append(instruction)
+                        tmpProcLines.append(line)
                 else:
-                    tmpProcInstructions.append(instruction)
+                    tmpProcLines.append(line)
 
-            tmpSeg.processes[procName] = tmpProcInstructions
+            tmpSeg.processes[procName] = [(FileData.TextSegment.Instruction(tmpLine)) for tmpLine in tmpProcLines]
 
         tmpFileData.textSegments.append(tmpSeg)
         index = len(tmpFileData.textSegments) - 1
@@ -551,7 +553,7 @@ class Techniques:
         # to indicate the intended implementation of class should there be more techniques
 
         # Number of times to repeat each technique:
-        repeat_functionInlining = 2     # >3 takes time even with small programs-
+        repeat_functionInlining = 10     # >3 takes time even with small programs-
                                         # number of calls increases in fashion a(n+1) = a(n)^2 <=> a(n) = a(0)^(2^n))!
         # repeat_technique1 = 1
         # repeat_technique2 = 4
@@ -603,11 +605,14 @@ def applyTechniques(file: str, newLocation: str, techniques: Techniques):
 def main():
     print("my main is name!")
 
-    print("\nEnter location of file to apply function inlining to: ")
-    location = input()
+    #print("\nEnter location of file to apply function inlining to: ")
+    #location = input()
 
-    print("\nEnter location to which the file would be saved after applying said change(s): ")
-    newLocation = input()
+    #print("\nEnter location to which the file would be saved after applying said change(s): ")
+    #newLocation = input()
+
+    location = "C:\\Users\\Eli\\Desktop\\uni\\networks\\work\\antidisrubish\\more_testing\\main.asm"
+    newLocation = "C:\\Users\\Eli\\Desktop\\uni\\networks\\work\\antidisrubish\\more_testing\\m.asm"
 
     techniques = Techniques(applies_functionInlining=True)
     applyTechniques(location, newLocation, techniques)
