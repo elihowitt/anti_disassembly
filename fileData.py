@@ -1,7 +1,7 @@
 from typing import List, Dict       # Used for type hinting
 import copy                         # Used for non reference copies (shallow & deep)
 
-
+# A class encapsulating the information in a compiled c file (.asm).
 class FileData:
 
     # In this class when the term 'line(s)' is used the meaning is

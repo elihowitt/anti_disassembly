@@ -1,7 +1,9 @@
+import random
 from typing import List, Dict       # Used for type hinting
 import copy                         # Used for non reference copies (shallow & deep)
 from fileData import *
 from usefulFunctions import *
+
 
 class Techniques:
     """
@@ -14,18 +16,22 @@ class Techniques:
     # 2) The 'user' does not need to worry about string matches (as in other implementations of similar concepts).
     # 3) For 'Us', the programmers it is very modular and simple to change the order of techniques (see ctor).
 
-    def __init__(self, applies_functionInlining = False, applies_technique1 = False, applies_technique2 = False):
+    def __init__(self, applies_functionInlining = False, applies_junkCode = False):
         """
         Constructor method that specifies which technique instance will imply applying.
         """
-        # Techniques 'technique1' and 'technique2' are added here as comments-
-        # to indicate the intended implementation of class should there be more techniques
 
+        """
+        Im not sure this kind of implementation is as convenient and flexible as explicitly appending each time.
+        
         # Number of times to repeat each technique:
-        repeat_functionInlining = 10     # >3 takes time even with small programs-
+        repeat_functionInlining = 10    # >3 takes time even with even small recursive programs-
                                         # number of calls increases in fashion a(n+1) = a(n)^2 <=> a(n) = a(0)^(2^n))!
-        # repeat_technique1 = 1
-        # repeat_technique2 = 4
+        repeat_junkCode = 3
+        """        """self.techniqueOrder__.extend(['functionInlining'] * repeat_functionInlining)"""
+
+
+        junkSize = 2
 
         # Variable initialization:
         self.techniqueOrder__ = []      # Array of names of techniques ordered correctly
@@ -38,19 +44,21 @@ class Techniques:
 
         # Setting methods for each technique and its name:
         self.namedFunctions__['functionInlining'] = [applies_functionInlining, functionInlining]
-            # self.namedFunctions['technique1'] = [applies_technique1, funcTechnique1]
-            # self.namedFunctions['technique2'] = [applies_technique2, funcTechnique2]
+        self.namedFunctions__['junkCode'] = [applies_junkCode, getJunkCodeFunction(junkSize=junkSize)]
 
 
-        # Ordering methods: (in this example [technique1 -> function inlining -> technique2])
-        # self.techniqueOrder.append('technique1')
-        self.techniqueOrder__.extend(['functionInlining'] * repeat_functionInlining)
-        # self.techniqueOrder.append('technique2'')
+        # Ordering methods:
+        self.techniqueOrder__.append('junkCode')
+        self.techniqueOrder__.append('functionInlining')
+        self.techniqueOrder__.append('junkCode')
+        self.techniqueOrder__.append('functionInlining')
+        self.techniqueOrder__.append('junkCode')
 
         for t in self.techniqueOrder__:
             applies, func = self.namedFunctions__[t]
             if applies:
                 self.techniqueFunctions.append(func)
+
 
 def functionInlining(fd : FileData) -> FileData:
 
@@ -152,4 +160,85 @@ def functionInlining(fd : FileData) -> FileData:
             tmpFileData.functions[funcName] = index
 
     return tmpFileData
+
+def getJunkCodeFunction(junkSize=2):
+
+    def junkCode(fd: FileData) -> FileData:
+        """
+            Anti disassembly technique implementation that adds junk code to given 'FileData' object.
+            This function adds 'junkSize' lines that change a register in every place possible (per each register).
+            The code added actually runs but doesnt change the functionality of the program. (As opposed to the opposite).
+        """
+
+        for tsIdx, ts in enumerate(fd.textSegments):
+            for procName, procInstructions in ts.processes.items():
+
+                # The following is a utility matrix such that-
+                #   isNextUse[reg][i] = is the next occurrence of reg is the process an instruction that uses reg.
+                # This is useful for determining where a junk instruction that changes reg can be inserted-
+                #   only if the next occurrence is not a use of reg (as opposed to an instruction that only changes reg).
+                isNextUse = [[True for __ in range(len(procInstructions + 1))] for _ in range(16)]
+
+                # Calculating matrix values:
+                for idx, ins in enumerate(reversed(procInstructions)):
+                    for regIdx in range(16):
+                        occurred = False
+
+                        if regIdx in ins.uses:  # Is used in this line
+                            occurred = True
+                            isNextUse[regIdx] = True
+
+                        if not occurred and regIdx in ins.changes:  # Is only changed in this line
+                            occurred = True
+                            isNextUse[regIdx][idx] = False
+
+                        if not occurred:  # Otherwise the next is same as proceeding instruction
+                            isNextUse[regIdx][idx] = isNextUse[regIdx][idx + 1]
+
+                # New list of instructions after adding junk code
+                tmpInstructions: List[FileData.TextSegment.Instruction] = []
+                for idx, ins in enumerate(procInstructions):
+                    for regIdx in range(16):
+                        if isNextUse[regIdx][idx]:  # I.e. can we insert changes to reg before current instruction
+                            tmpInstructions.extend([getJunkInstruction(regIdx) for _ in range(junkSize)])
+
+                    tmpInstructions.append(ins)  # Adding original instruction
+
+                fd.textSegments[tsIdx].processes[procName] = copy.deepcopy(tmpInstructions)
+
+        return fd
+
+    return junkCode
+
+
+def getJunkInstruction(reg):
+    # Utility function for creating junk instructions that change 'reg' register
+
+    changingCommands = ['mov']      #, 'add', 'sub', 'imul', 'shl', 'shr', 'mul', 'xor']
+    # TODO: add support for more intricate instructions (& pass to funct available flags!),-
+    #  and pointer type arguments.
+
+    randCommand = changingCommands[random.randint(0, len(changingCommands)-1)]
+
+    secondArgument = None   # Represents the second argument in the instruction
+
+
+    registerNameIndex = random.randint(0, 3)    # There are 4 names(parts) for each register.
+                                                # Both must match to match sizes
+
+    # The probability the second argument will be a number-
+    #   theres a preference to use numbers since they wont add 'usage' restriction on the otherwise register.
+    probNum = 0.8
+
+    if  random.random() < probNum:
+        secondArgument = str(random.randint(-64, 64))
+
+    else:
+        secondArgument = \
+            FileData.TextSegment.Instruction.Argument.registerNames[random.randint(0, 15)][registerNameIndex]
+
+    return FileData.TextSegment.Instruction(
+        [randCommand,
+         FileData.TextSegment.Instruction.Argument.registerNames[reg][registerNameIndex],
+         secondArgument])
 

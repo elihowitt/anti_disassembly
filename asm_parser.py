@@ -4,15 +4,6 @@ import copy                         # Used for non reference copies (shallow & d
 from fileData import *
 from techniques import *
 
-# A class encapsulating the information in a compiled c file (.asm).
-
-
-# Utility function for changing names to avoid conflicts
-
-
-
-
-
 def applyTechniques(file: str, newLocation: str, techniques: Techniques):
 
     """
@@ -39,10 +30,7 @@ def main():
     print("\nEnter location to which the file would be saved after applying said change(s): ")
     newLocation = input()
 
-    #location = "C:\\Users\\Eli\\Desktop\\uni\\networks\\work\\antidisrubish\\more_testing\\main.asm"
-    #newLocation = "C:\\Users\\Eli\\Desktop\\uni\\networks\\work\\antidisrubish\\more_testing\\m.asm"
-
-    techniques = Techniques(applies_functionInlining=True)
+    techniques = Techniques(applies_functionInlining=True, applies_junkCode=True)
     applyTechniques(location, newLocation, techniques)
 
 

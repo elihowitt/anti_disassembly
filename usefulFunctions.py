@@ -1,5 +1,5 @@
 
-
+# Utility function for changing names to avoid conflicts
 def increaseName(name: str, boost=1) -> str:
     l = len(name)
     if l == 0:
