@@ -138,6 +138,10 @@ class FileData:
                     self.changeAll()
                     self.useAll()
 
+                # Array of units included in instruction regardless of what they do
+                self.includes = [unit for unit in range(FileData.TextSegment.Instruction.NUM_UNITS)
+                                 if self.uses[unit] or self.changes[unit]]
+
             def changeAll(self):
                 # Utility methode for assigning true to all flags of change.
                 # Useful for instructions which we assume change everything like memory assignment.

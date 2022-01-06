@@ -16,7 +16,7 @@ class Techniques:
     # 2) The 'user' does not need to worry about string matches (as in other implementations of similar concepts).
     # 3) For 'Us', the programmers it is very modular and simple to change the order of techniques (see ctor).
 
-    def __init__(self, applies_functionInlining = False, applies_junkCode = False):
+    def __init__(self, applies_functionInlining = False, applies_junkCode = False, applies_permuteLines = False):
         """
         Constructor method that specifies which technique instance will imply applying.
         """
@@ -30,8 +30,7 @@ class Techniques:
         repeat_junkCode = 3
         """        """self.techniqueOrder__.extend(['functionInlining'] * repeat_functionInlining)"""
 
-
-        junkSize = 2
+        junkSize = 1
 
         # Variable initialization:
         self.techniqueOrder__ = []      # Array of names of techniques ordered correctly
@@ -45,14 +44,17 @@ class Techniques:
         # Setting methods for each technique and its name:
         self.namedFunctions__['functionInlining'] = [applies_functionInlining, functionInlining]
         self.namedFunctions__['junkCode'] = [applies_junkCode, getJunkCodeFunction(junkSize=junkSize)]
-
+        self.namedFunctions__['permuteLines'] = [applies_permuteLines, permuteLines]
 
         # Ordering methods:
         self.techniqueOrder__.append('junkCode')
         #self.techniqueOrder__.append('functionInlining')
+        #self.techniqueOrder__.append('permuteLines')
         #self.techniqueOrder__.append('junkCode')
         #self.techniqueOrder__.append('functionInlining')
+        # self.techniqueOrder__.append('permuteLines')
         #self.techniqueOrder__.append('junkCode')
+        # self.techniqueOrder__.append('permuteLines')
 
         for t in self.techniqueOrder__:
             applies, func = self.namedFunctions__[t]
@@ -163,6 +165,39 @@ def functionInlining(fd : FileData) -> FileData:
 
 def getJunkCodeFunction(junkSize=2):
 
+    def getJunkInstruction(reg):
+        # Utility function for creating junk instructions that change 'reg' register
+
+        changingCommands = ['mov']  # , 'add', 'sub', 'imul', 'shl', 'shr', 'mul', 'xor']
+        # TODO: add support for more intricate instructions (& pass to funct available flags!),-
+        #  and pointer type arguments.
+
+        randCommand = changingCommands[random.randint(0, len(changingCommands) - 1)]
+
+        secondArgument = None  # Represents the second argument in the instruction
+
+        # registerNameIndex = random.randint(0, 3)    # There are 4 names(parts) for each register.
+        # Both must match to match sizes
+
+        registerNameIndex = 1  # testing on x32 atm
+        registerRange = 7
+
+        # The probability the second argument will be a number-
+        #   theres a preference to use numbers since they wont add 'usage' restriction on the otherwise register.
+        probNum = 0.8
+
+        if random.random() < probNum:
+            secondArgument = str(random.randint(-64, 64))
+
+        else:
+            secondArgument = \
+                FileData.TextSegment.Instruction.registerNames[random.randint(0, registerRange)][registerNameIndex]
+
+        return FileData.TextSegment.Instruction(
+            [randCommand,
+             FileData.TextSegment.Instruction.registerNames[reg][registerNameIndex] + ',',
+             secondArgument])
+
     def junkCode(fd: FileData) -> FileData:
         """
             Anti disassembly technique implementation that adds junk code to given 'FileData' object.
@@ -213,39 +248,98 @@ def getJunkCodeFunction(junkSize=2):
     return junkCode
 
 
-def getJunkInstruction(reg):
-    # Utility function for creating junk instructions that change 'reg' register
+def permuteLines(fd: FileData) -> FileData:
+    """
+            Anti disassembly technique implementation that
+            permutes all order-invariant instructions in given 'FileData' object.
+    """
 
-    changingCommands = ['mov']      #, 'add', 'sub', 'imul', 'shl', 'shr', 'mul', 'xor']
-    # TODO: add support for more intricate instructions (& pass to funct available flags!),-
-    #  and pointer type arguments.
+    # Enumeration of states of chunks of a unit, more details in inner loop.
+    UNIT_STATE_EMPTY = 0
+    UNIT_STATE_USES = 1
+    UNIT_STATE_CHANGES = 2
+    UNIT_STATE_LAST_CHANGE = 3
+    UNIT_STATE_USES_AND_CHANGES = 4
 
-    randCommand = changingCommands[random.randint(0, len(changingCommands)-1)]
+    for tsIdx, ts in enumerate(fd.textSegments):
+        for procName, procInstructions in ts.processes:
+            tmpProcInstructions = []
 
-    secondArgument = None   # Represents the second argument in the instruction
+            # This matrix represents for each unit the groups of instructions that as far as the unit cares-
+            #   are order-invariant. Looks like~ unitChunks[unit] = [{instruction1, instruction5}, {instruction13},...].
+            # Where chunks are { a bunch of uses }, { a bunch of changes },
+            # { single change (cannot be moved relative to previous changes or next group of uses) }, { uses }...
+            # unitChunks[unit] will be treated as stack
 
+            unitChunks = [[] for _ in FileData.TextSegment.Instruction.NUM_UNITS]
 
-    #registerNameIndex = random.randint(0, 3)    # There are 4 names(parts) for each register.
-                                                # Both must match to match sizes
+            # Array of previous states per unit
+            unitState = [UNIT_STATE_EMPTY for _ in FileData.TextSegment.Instruction.NUM_UNITS]
 
-    registerNameIndex = 1     # testing on x32 atm
-    registerRange = 7
+            numInstructions = len(procInstructions)
 
-    # The probability the second argument will be a number-
-    #   theres a preference to use numbers since they wont add 'usage' restriction on the otherwise register.
-    probNum = 0.8
+            # Computing unitChunks
+            for idx, procInstruction in enumerate(reversed(procInstructions)):
+                for unit in ins.inclues:
+                    if procInstruction.changes[unit]:
+                        if procInstruction.uses[unit]:
+                            unitChunks.append(set(numInstructions-idx-1))
+                            unitState[unit] = UNIT_STATE_USES_AND_CHANGES
 
-    if  random.random() < probNum:
-        secondArgument = str(random.randint(-64, 64))
+                        elif unitState[unit] == UNIT_STATE_EMPTY or  unitState[unit] == UNIT_STATE_USES or  \
+                                unitState[unit] == UNIT_STATE_USES_AND_CHANGES:
+                            unitChunks.append(set(numInstructions-idx-1))
+                            unitState[unit] = UNIT_STATE_LAST_CHANGE
 
-    else:
-        secondArgument = \
-            FileData.TextSegment.Instruction.registerNames[random.randint(0, registerRange)][registerNameIndex]
+                        elif unitState[unit] == UNIT_STATE_LAST_CHANGE:
+                            unitChunks.append(set(numInstructions - idx - 1))
+                            unitState[unit] = UNIT_STATE_CHANGES
 
-    return FileData.TextSegment.Instruction(
-        [randCommand,
-         FileData.TextSegment.Instruction.registerNames[reg][registerNameIndex] + ',',
-         secondArgument])
+                        else:   # Join a chnages group
+                            unitChunks.top().add(numInstructions - idx - 1)
+                            unitState[unit] = UNIT_STATE_CHANGES
 
+                    else:   # Must be in uses:
+                        if unitState[unit] == UNIT_STATE_USES:  # Join uses group
+                            unitChunks.top().add(numInstructions-idx-1)
 
+                        else:   # create new uses group
+                            unitChunks.append(set(numInstructions - idx - 1))
+                            unitState[unit] = UNIT_STATE_USES
+
+            availableInstructions = ListDict(range(numInstructions))
+            notReady = [0 for _ in range(numInstructions)]  # notReady[ins] = how many units are not ready fo ins
+
+            # Loop over all chunks of units that are not the first chunk and update notReady
+            for unit in range(FileData.TextSegment.Instruction.NUM_UNITS):
+                for chunk in unitChunks[unit][:-1]:
+                    for ins in chunk:
+                        if notReady[ins] == 0:
+                            availableInstructions.remove_item(ins)   # At least 'unit' isn't ready for 'ins'
+                        notReady[ins] += 1
+
+            # Adding in available commands at random:
+            while len(availableInstructions) != 0:
+                ins = availableInstructions.choose_random_item()
+                availableInstructions.remove_item(ins)
+                chosenInstruction = copy.deepcopy(procInstructions[ins])
+
+                tmpProcInstructions.append(chosenInstruction)    # Adding chosen instruction
+
+                # Updating units chunks:
+                for unit in chosenInstruction.includes:
+                    lastIdx = len(unitChunks[unit]) - 1
+                    unitChunks[unit][lastIdx].remove(ins)
+
+                    # If we removed last instructions in chunk then unit is ready for next chunk-
+                    if unitChunks[unit][lastIdx].count() == 0:
+                        unitChunks[unit].pop()
+                        for readyIns in unitChunks[unit][lastIdx-1]:
+                            notReady[readyIns] -= 1
+                            if notReady[readyIns] == 0:     # Now every unit is ready
+                                availableInstructions.add_item(readyIns)
+
+            fd.textSegments[tsIdx].processes[procName] = tmpProcInstructions
+
+    return fd
 

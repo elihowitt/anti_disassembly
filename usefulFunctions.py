@@ -1,4 +1,6 @@
 
+import random
+
 # Utility function for changing names to avoid conflicts
 def increaseName(name: str, boost=1) -> str:
     l = len(name)
@@ -79,3 +81,39 @@ def swapLabels(line, oldName, newName):
     return line
 
 
+# Taken from https://stackoverflow.com/questions/15993447/python-data-structure-for-efficient-add-remove-and-random-choice
+class ListDict(object):
+    def __init__(self):
+        self.item_to_position = {}
+        self.items = []
+
+    def __init__(self, numRange):
+        self.item_to_position = {}
+        self.items = []
+        for i in numRange:
+            self.add_item(i)
+
+    def add_item(self, item):
+        if item in self.item_to_position:
+            return
+        self.items.append(item)
+        self.item_to_position[item] = len(self.items)-1
+
+    def remove_item(self, item):
+        position = self.item_to_position.pop(item)
+        last_item = self.items.pop()
+        if position != len(self.items):
+            self.items[position] = last_item
+            self.item_to_position[last_item] = position
+
+    def choose_random_item(self):
+        return random.choice(self.items)
+
+    def __contains__(self, item):
+        return item in self.item_to_position
+
+    def __iter__(self):
+        return iter(self.items)
+
+    def __len__(self):
+        return len(self.items)
