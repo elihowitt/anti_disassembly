@@ -23,38 +23,28 @@ class FileData:
                     # Parse argument:
                     if 'PTR' in arg:
                         self.isPointer = True
-                        address = arg[arg.rfind('['): arg.rfind(']') + 1]
-                        # TODO: loop trough *all* brackets.
-                        validNeighbors = ['[', '+', '-', '*', ']', ' ']
-                        for unitIdx, names in FileData.TextSegment.Instruction.registerNames.items():
-                            for name in names:
-                                nameLen = len(name)
-                                appearanceIdx = address.find(name)
-                                while appearanceIdx != -1:
-                                    if appearanceIdx > 0 and \
-                                        address[appearanceIdx-1] in validNeighbors and \
-                                        address[appearanceIdx+nameLen] in validNeighbors:
+                        arg = arg[arg.rfind('['): arg.rfind(']') + 1]
 
-                                        self.includes.append(unitIdx)
-                                        break
-                                if unitIdx in self.includes:
-                                    break
+                    else:       # to allow single check for pointer an non pointer.
+                        arg = '[' + arg + ']'
 
-                    else:
-                        # TODO: loop trough *all* brackets.
-                        validNeighbors = ['[', '+', '-', '*', ']', ' ']
-                        for unitIdx, names in FileData.TextSegment.Instruction.registerNames.items():
-                            for name in names:
-                                nameLen = len(name)
-                                appearanceIdx = arg.find(name)
-                                while appearanceIdx != -1:
-                                    if appearanceIdx > 0 and \
-                                            arg[appearanceIdx - 1] in validNeighbors and \
-                                            arg[appearanceIdx + nameLen] in validNeighbors:
-                                        self.includes.append(unitIdx)
-                                        break
-                                if unitIdx in self.includes:
+                    validNeighbors = ['[', '+', '-', '*', ']', ' ']
+                    for unitIdx, names in FileData.TextSegment.Instruction.registerNames.items():
+                        for name in names:
+                            nameLen = len(name)
+                            appearanceIdx = arg.find(name)
+                            while appearanceIdx != -1:
+                                if appearanceIdx > 0 and \
+                                        arg[appearanceIdx-1] in validNeighbors and \
+                                        arg[appearanceIdx+nameLen] in validNeighbors:
+                                    self.includes.append(unitIdx)
                                     break
+                                appearanceIdx = arg.find(name, appearanceIdx + nameLen)
+
+                            if unitIdx in self.includes:
+                                break
+
+
 
             def __init__(self, line):
                 self.line = copy.deepcopy(line)
@@ -73,11 +63,13 @@ class FileData:
                     self.useAll()
 
                 elif ins in FileData.TextSegment.Instruction.INSTRUCTIONS_NO_ARGS:
-                    pass
+                    self.changeAll()
+                    self.useAll()
 
-                elif ins in FileData.TextSegment.Instruction.INSTRUCTIONS_ONE_ARGS:
+                elif ins in FileData.TextSegment.Instruction.INSTRUCTIONS_ONE_ARG:
                     arg = FileData.TextSegment.Instruction.Argument(' '.join(line[1:]))
-                    pass
+                    self.changeAll()
+                    self.useAll()
 
                 elif ins in FileData.TextSegment.Instruction.INSTRUCTIONS_TWO_ARGS:
                     linePart1, linePart2 = (' '.join(line[1:])).split(',')
@@ -97,7 +89,7 @@ class FileData:
                             for unit in arg2.includes:
                                 self.uses[unit] = True
                         else:
-                            for unit in arg1.includes:
+                            for unit in arg2.includes:
                                 self.uses[unit] = True
 
                     elif ins == 'add' or ins == 'sub' or ins == 'xor':
@@ -116,7 +108,7 @@ class FileData:
                             for unit in arg2.includes:
                                 self.uses[unit] = True
                         else:
-                            for unit in arg1.includes:
+                            for unit in arg2.includes:
                                 self.uses[unit] = True
 
                     elif ins == 'cmp':
@@ -137,7 +129,7 @@ class FileData:
                             for unit in arg2.includes:
                                 self.uses[unit] = True
                         else:
-                            for unit in arg1.includes:
+                            for unit in arg2.includes:
                                 self.uses[unit] = True
 
                     # ... for all instructions in INSTRUCTIONS_TWO_ARGS.
@@ -161,7 +153,7 @@ class FileData:
             # Arrays of instructions grouped by amount og arguments they take:
             INSTRUCTIONS_NO_ARGS = ['cdq']
             INSTRUCTIONS_ONE_ARG = ['pop', 'push']
-            INSTRUCTIONS_TWO_ARG = ['mov', 'add', 'sub', 'mul', 'imul', 'lea', 'xor', 'cmp', 'shl', 'shr']
+            INSTRUCTIONS_TWO_ARGS = ['mov', 'add', 'sub', 'mul', 'imul', 'lea', 'xor', 'cmp', 'shl', 'shr']
 
             # Array of control flow instruction mnemonics we assume change and use everything:
             CONTROL_FLOW_MNEMONICS = [

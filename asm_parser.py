@@ -30,7 +30,7 @@ def main():
     print("\nEnter location to which the file would be saved after applying said change(s): ")
     newLocation = input()
 
-    techniques = Techniques(applies_functionInlining=True, applies_junkCode=True)
+    techniques = Techniques(applies_functionInlining=False, applies_junkCode=True)
     applyTechniques(location, newLocation, techniques)
 
 

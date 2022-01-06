@@ -49,10 +49,10 @@ class Techniques:
 
         # Ordering methods:
         self.techniqueOrder__.append('junkCode')
-        self.techniqueOrder__.append('functionInlining')
-        self.techniqueOrder__.append('junkCode')
-        self.techniqueOrder__.append('functionInlining')
-        self.techniqueOrder__.append('junkCode')
+        #self.techniqueOrder__.append('functionInlining')
+        #self.techniqueOrder__.append('junkCode')
+        #self.techniqueOrder__.append('functionInlining')
+        #self.techniqueOrder__.append('junkCode')
 
         for t in self.techniqueOrder__:
             applies, func = self.namedFunctions__[t]
@@ -177,29 +177,31 @@ def getJunkCodeFunction(junkSize=2):
                 #   isNextUse[reg][i] = is the next occurrence of reg is the process an instruction that uses reg.
                 # This is useful for determining where a junk instruction that changes reg can be inserted-
                 #   only if the next occurrence is not a use of reg (as opposed to an instruction that only changes reg).
-                isNextUse = [[True for __ in range(len(procInstructions + 1))] for _ in range(16)]
+                registerRange = 7   # testing on x32
+                matrixWidth = len(procInstructions)
+                isNextUse = [[True for __ in range(matrixWidth + 1)] for _ in range(registerRange + 1)]
 
                 # Calculating matrix values:
                 for idx, ins in enumerate(reversed(procInstructions)):
-                    for regIdx in range(16):
+                    for regIdx in range(registerRange + 1):
                         occurred = False
 
-                        if regIdx in ins.uses:  # Is used in this line
+                        if ins.uses[regIdx]:  # Is used in this line
                             occurred = True
-                            isNextUse[regIdx] = True
+                            isNextUse[regIdx][matrixWidth-idx-1] = True
 
-                        if not occurred and regIdx in ins.changes:  # Is only changed in this line
+                        if not occurred and ins.changes[regIdx]:  # Is only changed in this line
                             occurred = True
-                            isNextUse[regIdx][idx] = False
+                            isNextUse[regIdx][matrixWidth-idx-1] = False
 
                         if not occurred:  # Otherwise the next is same as proceeding instruction
-                            isNextUse[regIdx][idx] = isNextUse[regIdx][idx + 1]
+                            isNextUse[regIdx][matrixWidth-idx-1] = isNextUse[regIdx][matrixWidth-idx]
 
                 # New list of instructions after adding junk code
                 tmpInstructions: List[FileData.TextSegment.Instruction] = []
                 for idx, ins in enumerate(procInstructions):
-                    for regIdx in range(16):
-                        if isNextUse[regIdx][idx]:  # I.e. can we insert changes to reg before current instruction
+                    for regIdx in range(registerRange + 1):
+                        if not isNextUse[regIdx][idx]:  # I.e. can we insert changes to reg before current instruction
                             tmpInstructions.extend([getJunkInstruction(regIdx) for _ in range(junkSize)])
 
                     tmpInstructions.append(ins)  # Adding original instruction
@@ -223,8 +225,11 @@ def getJunkInstruction(reg):
     secondArgument = None   # Represents the second argument in the instruction
 
 
-    registerNameIndex = random.randint(0, 3)    # There are 4 names(parts) for each register.
+    #registerNameIndex = random.randint(0, 3)    # There are 4 names(parts) for each register.
                                                 # Both must match to match sizes
+
+    registerNameIndex = 1     # testing on x32 atm
+    registerRange = 7
 
     # The probability the second argument will be a number-
     #   theres a preference to use numbers since they wont add 'usage' restriction on the otherwise register.
@@ -235,10 +240,12 @@ def getJunkInstruction(reg):
 
     else:
         secondArgument = \
-            FileData.TextSegment.Instruction.Argument.registerNames[random.randint(0, 15)][registerNameIndex]
+            FileData.TextSegment.Instruction.registerNames[random.randint(0, registerRange)][registerNameIndex]
 
     return FileData.TextSegment.Instruction(
         [randCommand,
-         FileData.TextSegment.Instruction.Argument.registerNames[reg][registerNameIndex],
+         FileData.TextSegment.Instruction.registerNames[reg][registerNameIndex] + ',',
          secondArgument])
+
+
 
