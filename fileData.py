@@ -249,7 +249,7 @@ class FileData:
                 'loop', 'loope', 'loopne', 'loopnz', 'loopz', 'ret']
 
             # Number of registers (or other memory units we may track):
-            NUM_UNITS = 23
+            NUM_UNITS = 15
 
             # Register indices:
             RAX_IDX = 0
@@ -260,25 +260,27 @@ class FileData:
             RDI_IDX = 5
             RBP_IDX = 6
             RSP_IDX = 7
-            R8_IDX = 8
-            R9_IDX = 9
-            R10_IDX = 10
-            R11_IDX = 11
-            R12_IDX = 12
-            R13_IDX = 13
-            R14_IDX = 14
-            R15_IDX = 15
+
+            # 64 bit version ):
+            # R8_IDX = 8
+            # R9_IDX = 9
+            # R10_IDX = 10
+            # R11_IDX = 11
+            # R12_IDX = 12
+            # R13_IDX = 13
+            # R14_IDX = 14
+            # R15_IDX = 15
 
             # Flag bits indices:
-            CF_IDX = 16
-            PF_IDX = 17
-            AF_IDX = 18
-            ZF_IDX = 19
-            SF_IDX = 20
-            OF_IDX = 21
+            CF_IDX = 8  # 16
+            PF_IDX = 9  # 17
+            AF_IDX = 10  # 18
+            ZF_IDX = 11  # 19
+            SF_IDX = 12  # 20
+            OF_IDX = 13  # 21
 
             # Memory (stack)
-            MEM = 22
+            MEM = 14  # 22
 
             # Dictionary mapping register index to portion names:
             registerNames = dict()
@@ -290,14 +292,14 @@ class FileData:
             registerNames[RDI_IDX] = ['rdi', 'edi', 'di', 'dil']
             registerNames[RBP_IDX] = ['rbp', 'ebp', 'bp', 'bpl']
             registerNames[RSP_IDX] = ['rsp', 'esp', 'sp', 'spl']
-            registerNames[R8_IDX] = ['r8', 'r8d', 'r8w', 'r8b']
-            registerNames[R9_IDX] = ['r9', 'r9d', 'r9w', 'r9b']
-            registerNames[R10_IDX] = ['r10', 'r10d', 'r10w', 'r10b']
-            registerNames[R11_IDX] = ['r11', 'r11d', 'r11w', 'r11b']
-            registerNames[R12_IDX] = ['r12', 'r12d', 'r12w', 'r12b']
-            registerNames[R13_IDX] = ['r13', 'r13d', 'r13w', 'r13b']
-            registerNames[R14_IDX] = ['r14', 'r14d', 'r14w', 'r14b']
-            registerNames[R15_IDX] = ['r15', 'r15d', 'r15w', 'r15b']
+            # registerNames[R8_IDX] = ['r8', 'r8d', 'r8w', 'r8b']
+            # registerNames[R9_IDX] = ['r9', 'r9d', 'r9w', 'r9b']
+            # registerNames[R10_IDX] = ['r10', 'r10d', 'r10w', 'r10b']
+            # registerNames[R11_IDX] = ['r11', 'r11d', 'r11w', 'r11b']
+            # registerNames[R12_IDX] = ['r12', 'r12d', 'r12w', 'r12b']
+            # registerNames[R13_IDX] = ['r13', 'r13d', 'r13w', 'r13b']
+            # registerNames[R14_IDX] = ['r14', 'r14d', 'r14w', 'r14b']
+            # registerNames[R15_IDX] = ['r15', 'r15d', 'r15w', 'r15b']
 
             # Dictionary mapping name of portion of register to register index:
             registerIndex = dict()

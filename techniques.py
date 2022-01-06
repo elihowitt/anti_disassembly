@@ -180,7 +180,7 @@ def getJunkCodeFunction(junkSize=2):
                 #   isNextUse[reg][i] = is the next occurrence of reg is the process an instruction that uses reg.
                 # This is useful for determining where a junk instruction that changes reg can be inserted-
                 #   only if the next occurrence is not a use of reg (as opposed to an instruction that only changes reg).
-                registerRange = 7   # testing on x32
+                registerRange = 14   # testing on x32
                 matrixWidth = len(procInstructions)
                 isNextUse = [[True for __ in range(matrixWidth + 1)] for _ in range(registerRange + 1)]
 
@@ -204,14 +204,18 @@ def getJunkCodeFunction(junkSize=2):
                 tmpInstructions: List[FileData.TextSegment.Instruction] = []
                 for idx, ins in enumerate(procInstructions):
                     canChange = []
+                    regCanCh = False
                     for regIdx in range(registerRange + 1):
                         if not isNextUse[regIdx][idx]:  # I.e. can we insert changes to reg before current instruction
                             canChange.append(regIdx)
+                            if regIdx <= 7:
+                                regCanCh = True
 
-                    numJunk = random.randint(0, junkSize)
-                    tmpInstructions.extend([getJunkInstruction(canChange) for _ in range(numJunk)])
+                    if regCanCh:
+                        numJunk = random.randint(0, junkSize)
+                        tmpInstructions.extend([getJunkInstruction(canChange) for _ in range(numJunk)])
 
-                    tmpInstructions.append(ins)  # Adding original instruction
+                        tmpInstructions.append(ins)  # Adding original instruction
 
                 fd.textSegments[tsIdx].processes[procName] = copy.deepcopy(tmpInstructions)
 
