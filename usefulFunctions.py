@@ -81,7 +81,7 @@ def swapLabels(line, oldName, newName):
 
     return line
 
-def getJunkInstruction(reg):
+def getJunkInstruction(canChange):
         # Utility function for creating junk instructions that change 'reg' register
 
         changingCommands = ['mov']  # , 'add', 'sub', 'imul', 'shl', 'shr', 'mul', 'xor']

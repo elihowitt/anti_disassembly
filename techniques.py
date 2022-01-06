@@ -48,13 +48,13 @@ class Techniques:
 
         # Ordering methods:
         self.techniqueOrder__.append('junkCode')
-        #self.techniqueOrder__.append('functionInlining')
-        #self.techniqueOrder__.append('permuteLines')
-        #self.techniqueOrder__.append('junkCode')
-        #self.techniqueOrder__.append('functionInlining')
-        # self.techniqueOrder__.append('permuteLines')
-        #self.techniqueOrder__.append('junkCode')
-        # self.techniqueOrder__.append('permuteLines')
+        self.techniqueOrder__.append('functionInlining')
+        self.techniqueOrder__.append('permuteLines')
+        self.techniqueOrder__.append('junkCode')
+        self.techniqueOrder__.append('functionInlining')
+        self.techniqueOrder__.append('permuteLines')
+        self.techniqueOrder__.append('junkCode')
+        self.techniqueOrder__.append('permuteLines')
 
         for t in self.techniqueOrder__:
             applies, func = self.namedFunctions__[t]
@@ -131,12 +131,12 @@ def functionInlining(fd : FileData) -> FileData:
                         isCallerCleanUp: bool = False   # Whether the callee is cleaning the stack.
                                                         # We assume {ret imm} form indicates such a convention.
 
-                        tmpFuncLines2 = [['sub', 'rsp,', '4']]   # Adding a stub in place of {push eip} of call
+                        tmpFuncLines2 = [['sub', 'esp,', '4']]   # Adding a stub in place of {push eip} of call
                         for funcLine in tmpFuncLines:
                             if funcLine[0] == 'ret':
                                 if len(funcLine) == 2 and funcLine[1] != '0':
                                     # E.g. 'ret 8' <=> {return and pop 8 bytes from stack}
-                                    tmpFuncLines2.append(['add', 'rsp,', funcLine[1]])
+                                    tmpFuncLines2.append(['add', 'esp,', funcLine[1]])
                                     isCallerCleanUp = True
                                 tmpFuncLines2.append(['jmp', newName])
                             else:
@@ -147,7 +147,7 @@ def functionInlining(fd : FileData) -> FileData:
                         # Insert function:
                         tmpProcLines.extend(tmpFuncLines2)
                         if not isCallerCleanUp:                 # Removing stub {pop eip} of ret
-                            tmpProcLines.append(['add', 'rsp,', '4'])
+                            tmpProcLines.append(['add', 'esp,', '4'])
 
                     else:
                         tmpProcLines.append(line)
@@ -203,9 +203,13 @@ def getJunkCodeFunction(junkSize=2):
                 # New list of instructions after adding junk code
                 tmpInstructions: List[FileData.TextSegment.Instruction] = []
                 for idx, ins in enumerate(procInstructions):
+                    canChange = []
                     for regIdx in range(registerRange + 1):
                         if not isNextUse[regIdx][idx]:  # I.e. can we insert changes to reg before current instruction
-                            tmpInstructions.extend([getJunkInstruction(regIdx) for _ in range(junkSize)])
+                            canChange.append(regIdx)
+
+                    numJunk = random.randint(0, junkSize)
+                    tmpInstructions.extend([getJunkInstruction(canChange) for _ in range(numJunk)])
 
                     tmpInstructions.append(ins)  # Adding original instruction
 
@@ -230,7 +234,7 @@ def permuteLines(fd: FileData) -> FileData:
     UNIT_STATE_USES_AND_CHANGES = 4
 
     for tsIdx, ts in enumerate(fd.textSegments):
-        for procName, procInstructions in ts.processes:
+        for procName, procInstructions in ts.processes.items():
             tmpProcInstructions = []
 
             # This matrix represents for each unit the groups of instructions that as far as the unit cares-
@@ -239,40 +243,40 @@ def permuteLines(fd: FileData) -> FileData:
             # { single change (cannot be moved relative to previous changes or next group of uses) }, { uses }...
             # unitChunks[unit] will be treated as stack
 
-            unitChunks = [[] for _ in FileData.TextSegment.Instruction.NUM_UNITS]
+            unitChunks = [[] for _ in range(FileData.TextSegment.Instruction.NUM_UNITS)]
 
             # Array of previous states per unit
-            unitState = [UNIT_STATE_EMPTY for _ in FileData.TextSegment.Instruction.NUM_UNITS]
+            unitState = [UNIT_STATE_EMPTY for _ in range(FileData.TextSegment.Instruction.NUM_UNITS)]
 
             numInstructions = len(procInstructions)
 
             # Computing unitChunks
             for idx, procInstruction in enumerate(reversed(procInstructions)):
-                for unit in ins.inclues:
+                for unit in procInstruction.includes:
                     if procInstruction.changes[unit]:
                         if procInstruction.uses[unit]:
-                            unitChunks.append(set(numInstructions-idx-1))
+                            unitChunks[unit].append(set([numInstructions-idx-1]))
                             unitState[unit] = UNIT_STATE_USES_AND_CHANGES
 
                         elif unitState[unit] == UNIT_STATE_EMPTY or  unitState[unit] == UNIT_STATE_USES or  \
                                 unitState[unit] == UNIT_STATE_USES_AND_CHANGES:
-                            unitChunks.append(set(numInstructions-idx-1))
+                            unitChunks[unit].append(set([numInstructions-idx-1]))
                             unitState[unit] = UNIT_STATE_LAST_CHANGE
 
                         elif unitState[unit] == UNIT_STATE_LAST_CHANGE:
-                            unitChunks.append(set(numInstructions - idx - 1))
+                            unitChunks[unit].append(set([numInstructions - idx - 1]))
                             unitState[unit] = UNIT_STATE_CHANGES
 
                         else:   # Join a chnages group
-                            unitChunks.top().add(numInstructions - idx - 1)
+                            unitChunks[unit][-1].add(numInstructions - idx - 1)
                             unitState[unit] = UNIT_STATE_CHANGES
 
                     else:   # Must be in uses:
                         if unitState[unit] == UNIT_STATE_USES:  # Join uses group
-                            unitChunks.top().add(numInstructions-idx-1)
+                            unitChunks[unit][-1].add(numInstructions-idx-1)
 
                         else:   # create new uses group
-                            unitChunks.append(set(numInstructions - idx - 1))
+                            unitChunks[unit].append(set([numInstructions - idx - 1]))
                             unitState[unit] = UNIT_STATE_USES
 
             availableInstructions = ListDict(range(numInstructions))
@@ -296,16 +300,16 @@ def permuteLines(fd: FileData) -> FileData:
 
                 # Updating units chunks:
                 for unit in chosenInstruction.includes:
-                    lastIdx = len(unitChunks[unit]) - 1
-                    unitChunks[unit][lastIdx].remove(ins)
+                    unitChunks[unit][-1].remove(ins)
 
                     # If we removed last instructions in chunk then unit is ready for next chunk-
-                    if unitChunks[unit][lastIdx].count() == 0:
+                    if len(unitChunks[unit][-1]) == 0:
                         unitChunks[unit].pop()
-                        for readyIns in unitChunks[unit][lastIdx-1]:
-                            notReady[readyIns] -= 1
-                            if notReady[readyIns] == 0:     # Now every unit is ready
-                                availableInstructions.add_item(readyIns)
+                        if len(unitChunks[unit]) != 0:
+                            for readyIns in unitChunks[unit][-1]:
+                                notReady[readyIns] -= 1
+                                if notReady[readyIns] == 0:     # Now every unit is ready
+                                    availableInstructions.add_item(readyIns)
 
             fd.textSegments[tsIdx].processes[procName] = tmpProcInstructions
 

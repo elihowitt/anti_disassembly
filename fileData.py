@@ -89,12 +89,8 @@ class FileData:
                         self.changes[self.MEM] = True
                         self.uses[self.MEM] = True
 
-                        if arg.isPointer:
-                            for unit in arg.includes:
-                                self.uses[unit] = True
-                        else:
-                            for unit in arg.includes:
-                                self.changes[unit] = True
+                        for unit in arg.includes:
+                            self.uses[unit] = True
 
                     elif ins == 'inc':
                         self.changes[self.PF_IDX] = True
@@ -423,8 +419,11 @@ class FileData:
 
             else:   # Miscellaneous segment
                 if currSegment not in self.miscSegments:
-                    self.miscSegments[currSegment] = []
-                self.miscSegments[currSegment].append(line)
+                    self.miscSegments[currSegment] = [line]
+                elif len(line) == 2 and line[1] == 'ENDS':
+                    currSegment = None
+                else:
+                    self.miscSegments[currSegment].append(line)
 
     def getLines(self) -> [[str]]:
 
