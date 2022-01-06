@@ -25,15 +25,10 @@ def main():
     print("my main is name!")
 
     print("\nEnter location of file to apply function inlining to: ")
-    #location = input()
-    location = "C:\\Users\\malachi\\OneDrive\\Desktop\\things\\123\\main.asm"
+    location = input()
+
     print("\nEnter location to which the file would be saved after applying said change(s): ")
-    newLocation = "C:\\Users\\malachi\\OneDrive\\Desktop\\things\\123\\a.asm"
-
-    techniques = Techniques(applies_functionInlining=False, applies_junkCode=False, applies_permuteLines=False)
-    applyTechniques(location, newLocation, techniques)
-
-    newLocation = "C:\\Users\\malachi\\OneDrive\\Desktop\\things\\123\\b.asm"
+    newLocation = input()
 
     techniques = Techniques(applies_functionInlining=False, applies_junkCode=True, applies_permuteLines=False)
     applyTechniques(location, newLocation, techniques)

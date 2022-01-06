@@ -99,7 +99,7 @@ def getJunkInstruction(canChange):
         flags = [i for i in canChange if i > registerRange]
         registers = [i for i in canChange if i <= registerRange]
 
-        PCAZSO = 0
+        PCAZSO =  0
         Mem = True
         for i in flags:
             if i > 7 and i < 14:
