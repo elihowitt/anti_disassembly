@@ -204,18 +204,18 @@ def getJunkCodeFunction(junkSize=2):
                 tmpInstructions: List[FileData.TextSegment.Instruction] = []
                 for idx, ins in enumerate(procInstructions):
                     canChange = []
-                    regCanCh = False
+                    regChangeFlag = False
                     for regIdx in range(registerRange + 1):
                         if not isNextUse[regIdx][idx]:  # I.e. can we insert changes to reg before current instruction
                             canChange.append(regIdx)
                             if regIdx <= 7:
-                                regCanCh = True
+                                regChangeFlag = True
 
-                    if regCanCh:
+                    if regChangeFlag:
                         numJunk = random.randint(0, junkSize)
                         tmpInstructions.extend([getJunkInstruction(canChange) for _ in range(numJunk)])
 
-                        tmpInstructions.append(ins)  # Adding original instruction
+                    tmpInstructions.append(ins)  # Adding original instruction
 
                 fd.textSegments[tsIdx].processes[procName] = copy.deepcopy(tmpInstructions)
 

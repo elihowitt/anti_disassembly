@@ -85,58 +85,67 @@ def getJunkInstruction(canChange):
         # Utility function for creating junk instructions that change 'reg' register
 
         changingCommands = ['mov']
-        changeFlagsPCAZSO = ['add','sub','xor','and','or']
-        changeMem = ['lea']
-        # , 'add', 'sub', 'imul', 'shl', 'shr', 'mul', 'xor']
+        changeFlagsPCAZSO = ['add', 'sub', 'xor', 'and', 'or']
+        # changeMem = ['lea']
+
         # TODO: add support for more intricate instructions (& pass to funct available flags!),-
         #  and pointer type arguments.
 
-        registerNameIndex = 1  # testing on x32 atm
         registerRange = 7
         flagsRange = 14
 
 
-        flags = [i for i in canChange if i > registerRange]
+        # flags = [i for i in canChange if i > registerRange]
         registers = [i for i in canChange if i <= registerRange]
 
-        PCAZSO =  0
-        Mem = True
-        for i in flags:
-            if i > 7 and i < 14:
-                PCAZSO += 1
-            if i == 14:
-                Mem = False
-        if PCAZSO == 6:
-            randCommand = changeFlagsPCAZSO[random.randint(0, len(changeFlagsPCAZSO) - 1)]
+        # PCAZSO =  0
+        # Mem = True
+        # for i in flags:
+        #     if i > 7 and i < 14:
+        #         PCAZSO += 1
+        #     if i == 14:
+        #         Mem = False
+        # if PCAZSO == 6:
+        if all(flagIdx in canChange
+                for flagIdx in [
+                FileData.TextSegment.Instruction.CF_IDX,
+                FileData.TextSegment.Instruction.PF_IDX,
+                FileData.TextSegment.Instruction.AF_IDX,
+                FileData.TextSegment.Instruction.ZF_IDX,
+                FileData.TextSegment.Instruction.SF_IDX,
+                FileData.TextSegment.Instruction.OF_IDX]
+            ):
+            randCommand = random.choice(changeFlagsPCAZSO)
+
         else:
-            randCommand = changingCommands[random.randint(0, len(changingCommands) - 1)]
-        secondArgument = None  # Represents the second argument in the instruction
-
-        # registerNameIndex = random.randint(0, 3)    # There are 4 names(parts) for each register.
-        # Both must match to match sizes
-
-
-
+            randCommand = random.choice(changingCommands)
 
         # The probability the second argument will be a number-
         #   theres a preference to use numbers since they wont add 'usage' restriction on the otherwise register.
         probNum = 0.4
 
-        if random.random() < probNum:
-            secondArgument = str(random.randint(-64, 64))
+        smallOptionRegisters = [FileData.TextSegment.Instruction.RSP_IDX, FileData.TextSegment.Instruction.RBP_IDX,
+            FileData.TextSegment.Instruction.RSI_IDX, FileData.TextSegment.Instruction.RDI_IDX]
 
-        else:
-            secondArgument = \
-                FileData.TextSegment.Instruction.registerNames[random.randint(0, registerRange)][registerNameIndex]
-
-        if registers == []:
+        if not registers:
             return FileData.TextSegment.Instruction([])
         else:
-            reg = registers[random.randint(0, len(registers) - 1)]
+            reg1 = random.choice(registers)
+
+        if random.random() < probNum:
+            nameCeil = 1 if reg1 in smallOptionRegisters else 3
+            arg1 = FileData.TextSegment.Instruction.registerNames[reg1][random.randint(0, nameCeil)]
+            arg2 = str(random.randint(-64, 64))
+
+        else:
+            reg2 = random.randint(0, registerRange)
+            nameCeil = 1 if any(reg in smallOptionRegisters for reg in [reg1, reg2]) else 3
+            nameIdx = random.randint(0, nameCeil)   # Must be same across both registers to match argument size
+            arg1 = FileData.TextSegment.Instruction.registerNames[reg1][nameIdx]
+            arg2 = FileData.TextSegment.Instruction.registerNames[reg2][nameIdx]
+
         return FileData.TextSegment.Instruction(
-            [randCommand,
-             FileData.TextSegment.Instruction.registerNames[reg][registerNameIndex] + ',',
-             secondArgument])
+            [randCommand, arg1 + ',', arg2])
 
 # Taken from https://stackoverflow.com/questions/15993447/python-data-structure-for-efficient-add-remove-and-random-choice
 class ListDict(object):

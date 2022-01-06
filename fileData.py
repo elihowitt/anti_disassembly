@@ -215,7 +215,6 @@ class FileData:
                             self.uses[unit] = True
 
 
-                    # ... for all instructions in INSTRUCTIONS_TWO_ARGS.
 
                 else:   # unsupported instruction, assume 'the worst'.
                     self.changeAll()
@@ -284,14 +283,14 @@ class FileData:
 
             # Dictionary mapping register index to portion names:
             registerNames = dict()
-            registerNames[RAX_IDX] = ['rax', 'eax', 'ax', 'al']
-            registerNames[RBX_IDX] = ['rbx', 'ebx', 'bx', 'bl']
-            registerNames[RCX_IDX] = ['rcx', 'ecx', 'cx', 'cl']
-            registerNames[RDX_IDX] = ['rdx', 'edx', 'dx', 'dl']
-            registerNames[RSI_IDX] = ['rsi', 'esi', 'si', 'sil']
-            registerNames[RDI_IDX] = ['rdi', 'edi', 'di', 'dil']
-            registerNames[RBP_IDX] = ['rbp', 'ebp', 'bp', 'bpl']
-            registerNames[RSP_IDX] = ['rsp', 'esp', 'sp', 'spl']
+            registerNames[RAX_IDX] =   ['eax', 'ax', 'ah', 'al']    #'''['rax','''
+            registerNames[RBX_IDX] =   ['ebx', 'bx', 'bh', 'bl']    #'''['rbx','''
+            registerNames[RCX_IDX] =   ['ecx', 'cx', 'ch', 'cl']    #'''['rcx','''
+            registerNames[RDX_IDX] =   ['edx', 'dx', 'dh', 'dl']    #'''['rdx','''
+            registerNames[RSI_IDX] =   ['esi', 'si']                #''', 'sil']    ['rsi','''
+            registerNames[RDI_IDX] =   ['edi', 'di']                #''', 'dil']    ['rdi','''
+            registerNames[RBP_IDX] =   ['ebp', 'bp']                #''', 'bpl']    ['rbp','''
+            registerNames[RSP_IDX] =   ['esp', 'sp']                #''', 'spl']    ['rsp','''
             # registerNames[R8_IDX] = ['r8', 'r8d', 'r8w', 'r8b']
             # registerNames[R9_IDX] = ['r9', 'r9d', 'r9w', 'r9b']
             # registerNames[R10_IDX] = ['r10', 'r10d', 'r10w', 'r10b']
