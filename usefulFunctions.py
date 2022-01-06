@@ -1,5 +1,6 @@
 
 import random
+from fileData import *
 
 # Utility function for changing names to avoid conflicts
 def increaseName(name: str, boost=1) -> str:
@@ -80,6 +81,38 @@ def swapLabels(line, oldName, newName):
 
     return line
 
+def getJunkInstruction(reg):
+        # Utility function for creating junk instructions that change 'reg' register
+
+        changingCommands = ['mov']  # , 'add', 'sub', 'imul', 'shl', 'shr', 'mul', 'xor']
+        # TODO: add support for more intricate instructions (& pass to funct available flags!),-
+        #  and pointer type arguments.
+
+        randCommand = changingCommands[random.randint(0, len(changingCommands) - 1)]
+
+        secondArgument = None  # Represents the second argument in the instruction
+
+        # registerNameIndex = random.randint(0, 3)    # There are 4 names(parts) for each register.
+        # Both must match to match sizes
+
+        registerNameIndex = 1  # testing on x32 atm
+        registerRange = 7
+
+        # The probability the second argument will be a number-
+        #   theres a preference to use numbers since they wont add 'usage' restriction on the otherwise register.
+        probNum = 0.8
+
+        if random.random() < probNum:
+            secondArgument = str(random.randint(-64, 64))
+
+        else:
+            secondArgument = \
+                FileData.TextSegment.Instruction.registerNames[random.randint(0, registerRange)][registerNameIndex]
+
+        return FileData.TextSegment.Instruction(
+            [randCommand,
+             FileData.TextSegment.Instruction.registerNames[reg][registerNameIndex] + ',',
+             secondArgument])
 
 # Taken from https://stackoverflow.com/questions/15993447/python-data-structure-for-efficient-add-remove-and-random-choice
 class ListDict(object):

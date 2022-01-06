@@ -63,13 +63,55 @@ class FileData:
                     self.useAll()
 
                 elif ins in FileData.TextSegment.Instruction.INSTRUCTIONS_NO_ARGS:
-                    self.changeAll()
-                    self.useAll()
+                    if ins == 'cdq':
+                        self.uses[self.RAX_IDX] = True
+                        self.changes[self.RDX_IDX] = True
 
                 elif ins in FileData.TextSegment.Instruction.INSTRUCTIONS_ONE_ARG:
                     arg = FileData.TextSegment.Instruction.Argument(' '.join(line[1:]))
-                    self.changeAll()
-                    self.useAll()
+
+                    if ins == 'pop':
+                        self.uses[self.RSP_IDX] = True
+                        self.changes[self.RSP_IDX] = True
+                        self.changes[self.MEM] = True
+                        self.uses[self.MEM] = True
+
+                        if arg.isPointer:
+                            for unit in arg.includes:
+                                self.uses[unit] = True
+                        else:
+                            for unit in arg.includes:
+                                self.changes[unit] = True
+
+                    elif ins == 'push':
+                        self.uses[self.RSP_IDX] = True
+                        self.changes[self.RSP_IDX] = True
+                        self.changes[self.MEM] = True
+                        self.uses[self.MEM] = True
+
+                        if arg.isPointer:
+                            for unit in arg.includes:
+                                self.uses[unit] = True
+                        else:
+                            for unit in arg.includes:
+                                self.changes[unit] = True
+
+                    elif ins == 'inc':
+                        self.changes[self.PF_IDX] = True
+                        self.changes[self.AF_IDX] = True
+                        self.changes[self.ZF_IDX] = True
+                        self.changes[self.SF_IDX] = True
+                        self.changes[self.OF_IDX] = True
+
+                        if arg.isPointer:
+                            self.uses[self.MEM] = True
+                            self.changes[self.MEM] = True
+                            for unit in arg.includes:
+                                self.uses[unit] = True
+                        else:
+                            for unit in arg.includes:
+                                self.changes[unit] = True
+                                self.uses[unit] = True
 
                 elif ins in FileData.TextSegment.Instruction.INSTRUCTIONS_TWO_ARGS:
                     linePart1, linePart2 = (' '.join(line[1:])).split(',')
@@ -92,7 +134,14 @@ class FileData:
                             for unit in arg2.includes:
                                 self.uses[unit] = True
 
-                    elif ins == 'add' or ins == 'sub' or ins == 'xor':
+                    elif ins == 'add' or ins == 'sub' or ins == 'xor' or ins == 'and' or ins == 'or':
+                        self.changes[self.PF_IDX] = True
+                        self.changes[self.CF_IDX] = True
+                        self.changes[self.AF_IDX] = True
+                        self.changes[self.ZF_IDX] = True
+                        self.changes[self.SF_IDX] = True
+                        self.changes[self.OF_IDX] = True
+
                         if arg1.isPointer:
                             self.changes[self.MEM] = True
                             self.uses[self.MEM] = True
@@ -112,10 +161,13 @@ class FileData:
                                 self.uses[unit] = True
 
                     elif ins == 'cmp':
-                        self.uses[self.CF_IDX] = True
-                        self.uses[self.ZF_IDX] = True
-                        self.uses[self.SF_IDX] = True
-                        self.uses[self.OF_IDX] = True
+                        self.changes[self.PF_IDX] = True
+                        self.changes[self.CF_IDX] = True
+                        self.changes[self.AF_IDX] = True
+                        self.changes[self.ZF_IDX] = True
+                        self.changes[self.SF_IDX] = True
+                        self.changes[self.OF_IDX] = True
+
                         if arg1.isPointer:
                             self.uses[self.MEM] = True
                             for unit in arg1.includes:
@@ -131,6 +183,41 @@ class FileData:
                         else:
                             for unit in arg2.includes:
                                 self.uses[unit] = True
+
+                    elif ins == 'test':
+                        self.changes[self.PF_IDX] = True
+                        self.changes[self.CF_IDX] = True
+                        self.changes[self.AF_IDX] = True
+                        self.changes[self.ZF_IDX] = True
+                        self.changes[self.SF_IDX] = True
+                        self.changes[self.OF_IDX] = True
+
+                        if arg1.isPointer:
+                            self.uses[self.MEM] = True
+                            for unit in arg1.includes:
+                                self.uses[unit] = True
+                        else:
+                            for unit in arg1.includes:
+                                self.uses[unit] = True
+
+                        if arg2.isPointer:
+                            self.uses[self.MEM] = True
+                            for unit in arg2.includes:
+                                self.uses[unit] = True
+                        else:
+                            for unit in arg2.includes:
+                                self.uses[unit] = True
+
+
+                    elif ins == 'lea':
+                        self.uses[self.MEM] = True
+
+                        for unit in arg1.includes:
+                            self.changes[unit] = True
+
+                        for unit in arg2.includes:
+                            self.uses[unit] = True
+
 
                     # ... for all instructions in INSTRUCTIONS_TWO_ARGS.
 
@@ -156,14 +243,14 @@ class FileData:
 
             # Arrays of instructions grouped by amount og arguments they take:
             INSTRUCTIONS_NO_ARGS = ['cdq']
-            INSTRUCTIONS_ONE_ARG = ['pop', 'push']
-            INSTRUCTIONS_TWO_ARGS = ['mov', 'add', 'sub', 'mul', 'imul', 'lea', 'xor', 'cmp', 'shl', 'shr']
+            INSTRUCTIONS_ONE_ARG = ['pop', 'push', 'inc']
+            INSTRUCTIONS_TWO_ARGS = ['mov', 'add', 'sub', 'lea', 'xor', 'cmp', 'test', 'and', 'or']
 
             # Array of control flow instruction mnemonics we assume change and use everything:
             CONTROL_FLOW_MNEMONICS = [
                 'call', 'ret', 'jmp', 'je', 'jne', 'jg', 'jge', 'ja', 'jae', 'jl', 'jle',
                 'jb', 'jbe', 'jo', 'jno', 'jz', 'jnz', 'js', 'jns', 'jcxz', 'jecxz', 'jrcxz',
-                'loop', 'loope', 'loopne', 'loopnz', 'loopz']
+                'loop', 'loope', 'loopne', 'loopnz', 'loopz', 'ret']
 
             # Number of registers (or other memory units we may track):
             NUM_UNITS = 23

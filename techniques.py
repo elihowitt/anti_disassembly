@@ -165,38 +165,6 @@ def functionInlining(fd : FileData) -> FileData:
 
 def getJunkCodeFunction(junkSize=2):
 
-    def getJunkInstruction(reg):
-        # Utility function for creating junk instructions that change 'reg' register
-
-        changingCommands = ['mov']  # , 'add', 'sub', 'imul', 'shl', 'shr', 'mul', 'xor']
-        # TODO: add support for more intricate instructions (& pass to funct available flags!),-
-        #  and pointer type arguments.
-
-        randCommand = changingCommands[random.randint(0, len(changingCommands) - 1)]
-
-        secondArgument = None  # Represents the second argument in the instruction
-
-        # registerNameIndex = random.randint(0, 3)    # There are 4 names(parts) for each register.
-        # Both must match to match sizes
-
-        registerNameIndex = 1  # testing on x32 atm
-        registerRange = 7
-
-        # The probability the second argument will be a number-
-        #   theres a preference to use numbers since they wont add 'usage' restriction on the otherwise register.
-        probNum = 0.8
-
-        if random.random() < probNum:
-            secondArgument = str(random.randint(-64, 64))
-
-        else:
-            secondArgument = \
-                FileData.TextSegment.Instruction.registerNames[random.randint(0, registerRange)][registerNameIndex]
-
-        return FileData.TextSegment.Instruction(
-            [randCommand,
-             FileData.TextSegment.Instruction.registerNames[reg][registerNameIndex] + ',',
-             secondArgument])
 
     def junkCode(fd: FileData) -> FileData:
         """
