@@ -11,53 +11,32 @@ class Techniques:
     This class has the important role of dictating the order in which the techniques get applied.
     Intended usage: {instance.techniqueFunctions}.
     """
-    # This class is a bit over-kill and convoluted however it achieves three important things:
-    # 1) The 'user' can use the same instance in many places implicitly. (instead of a long list of booleans).
-    # 2) The 'user' does not need to worry about string matches (as in other implementations of similar concepts).
-    # 3) For 'Us', the programmers it is very modular and simple to change the order of techniques (see ctor).
 
-    def __init__(self, applies_functionInlining = False, applies_junkCode = False, applies_permuteLines = False):
+    TECHNIQUE_FUNCTION_INLINING = 0
+    TECHNIQUE_JUNK_CODE = 1
+    TECHNIQUE_PERMUTE_LINES = 2
+
+    NUM_TECHNIQUES = 3
+
+    def __init__(self, applies_functionInlining = False, applies_junkCode = False,
+                 applies_permuteLines = False, junkSize = 2,
+                 pipeline = [TECHNIQUE_JUNK_CODE, TECHNIQUE_FUNCTION_INLINING, TECHNIQUE_PERMUTE_LINES,
+                             TECHNIQUE_JUNK_CODE, TECHNIQUE_FUNCTION_INLINING, TECHNIQUE_PERMUTE_LINES]):
         """
         Constructor method that specifies which technique instance will imply applying.
+        argument 'junkSize': a measurement of how much junk code will be injected.
+        argument 'pipeline': an ordered list of technique indices to apply.
         """
 
-        """
-        Im not sure this kind of implementation is as convenient and flexible as explicitly appending each time.
-        
-        # Number of times to repeat each technique:
-        repeat_functionInlining = 10    # >3 takes time even with even small recursive programs-
-                                        # number of calls increases in fashion a(n+1) = a(n)^2 <=> a(n) = a(0)^(2^n))!
-        repeat_junkCode = 3
-        """        """self.techniqueOrder__.extend(['functionInlining'] * repeat_functionInlining)"""
-
-        junkSize = 1
-
-        # Variable initialization:
-        self.techniqueOrder__ = []      # Array of names of techniques ordered correctly
-        self.namedFunctions__ = dict()  # Dictionary mapping names of techniques to [isApplied, func]-
-                                        # the former is a flag wether the technique is applied or not, and
-                                        # the latter the function of corresponding technique
+        appliesFunc = [None for _ in range(Techniques.NUM_TECHNIQUES)]
+        appliesFunc[Techniques.TECHNIQUE_FUNCTION_INLINING] = [applies_functionInlining, functionInlining]
+        appliesFunc[Techniques.TECHNIQUE_JUNK_CODE] = [applies_junkCode, getJunkCodeFunction(junkSize)]
+        appliesFunc[Techniques.TECHNIQUE_PERMUTE_LINES] = [applies_permuteLines, permuteLines]
 
         self.techniqueFunctions = []    # Array of functions of techniques sorted in correct order
 
-
-        # Setting methods for each technique and its name:
-        self.namedFunctions__['functionInlining'] = [applies_functionInlining, functionInlining]
-        self.namedFunctions__['junkCode'] = [applies_junkCode, getJunkCodeFunction(junkSize=junkSize)]
-        self.namedFunctions__['permuteLines'] = [applies_permuteLines, permuteLines]
-
-        # Ordering methods:
-        self.techniqueOrder__.append('junkCode')
-        self.techniqueOrder__.append('functionInlining')
-        self.techniqueOrder__.append('permuteLines')
-        self.techniqueOrder__.append('junkCode')
-        self.techniqueOrder__.append('functionInlining')
-        self.techniqueOrder__.append('permuteLines')
-        self.techniqueOrder__.append('junkCode')
-        self.techniqueOrder__.append('permuteLines')
-
-        for t in self.techniqueOrder__:
-            applies, func = self.namedFunctions__[t]
+        for t in pipeline:
+            applies, func = appliesFunc[t]
             if applies:
                 self.techniqueFunctions.append(func)
 
@@ -65,7 +44,8 @@ class Techniques:
 def functionInlining(fd : FileData) -> FileData:
 
     """
-        Anti disassembly technique implementation that inlines all function calls in given 'FileData' object (once)
+        Anti disassembly technique implementation that inlines all function calls in given 'FileData' object (once).
+        Warning: recursive functions with inner calls>1 increase very fast! (a_n = a_0^(2^n))
     """
 
     tmpFileData = FileData()
@@ -162,6 +142,7 @@ def functionInlining(fd : FileData) -> FileData:
             tmpFileData.functions[funcName] = index
 
     return tmpFileData
+
 
 def getJunkCodeFunction(junkSize=2):
 
