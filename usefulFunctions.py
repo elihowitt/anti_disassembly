@@ -27,7 +27,9 @@ def increaseName(name: str, boost=1) -> str:
 
     return name[:l - i] + str(num+boost)
 
-
+# function that swap fully names
+# exanple: "hi", "bye"
+# "hi whi [hi+4]" -> "bye whi [bye+4]"
 def swapNames(line, oldName, newName):
     """
         Utility function to replace old names with new ones in a line of code.
@@ -58,6 +60,7 @@ def swapNames(line, oldName, newName):
     return newLine.split()
 
 
+# like swapNames to labels
 def swapLabels(line, oldName, newName):
     """
         Utility function to replace old label names with new ones in a line of code.
@@ -81,16 +84,15 @@ def swapLabels(line, oldName, newName):
 
     return line
 
+
 def getJunkInstruction(canChange):
         # Utility function for creating junk instructions that change 'reg' register
 
+        # the commands that we support
         changingCommands = ['mov', 'xchg']
         changeFlagsPCAZSO = ['add', 'sub', 'xor', 'and', 'or', 'cmp', 'test']
         changeFlagsPAZSO_oneArg = ['inc', 'dec']
-        # changeMem = ['lea']
 
-        # TODO: add support for more intricate instructions (& pass to funct available flags!),-
-        #  and pointer type arguments.
 
         registerRange = 7
         flagsRange = 14
@@ -98,17 +100,10 @@ def getJunkInstruction(canChange):
             FileData.TextSegment.Instruction.RSI_IDX, FileData.TextSegment.Instruction.RDI_IDX]
 
 
-        # flags = [i for i in canChange if i > registerRange]
         registers = [i for i in canChange if i <= registerRange]
 
-        # PCAZSO =  0
-        # Mem = True
-        # for i in flags:
-        #     if i > 7 and i < 14:
-        #         PCAZSO += 1
-        #     if i == 14:
-        #         Mem = False
-        # if PCAZSO == 6:
+
+        # chosing cmd by the flags we can use and change (and a litle of random)
         probOnearg = 0.15
         if all(flagIdx in canChange
                 for flagIdx in [
@@ -163,8 +158,7 @@ def getJunkInstruction(canChange):
         #   theres a preference to use numbers since they wont add 'usage' restriction on the otherwise register.
         probNum = 0.2
 
-
-        if not registers:
+        if not registers:  # if cannot use any register so do nothing
             return [FileData.TextSegment.Instruction([])]
         else:
             reg1 = random.choice(registers)

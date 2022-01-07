@@ -214,8 +214,6 @@ class FileData:
                         for unit in arg2.includes:
                             self.uses[unit] = True
 
-
-
                 else:   # unsupported instruction, assume 'the worst'.
                     self.changeAll()
                     self.useAll()
@@ -329,7 +327,6 @@ class FileData:
                 Assumes ';' of comments would be separated by whitespace, and-
                 Assumes no ';' exists in contexts other than comments (suc as string)
             """
-            # TODO: fix 2nd assumption of function
 
             res = []
             for part in line:

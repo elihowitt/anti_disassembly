@@ -146,7 +146,6 @@ def functionInlining(fd : FileData) -> FileData:
 
 def getJunkCodeFunction(junkSize=2):
 
-
     def junkCode(fd: FileData) -> FileData:
         """
             Anti disassembly technique implementation that adds junk code to given 'FileData' object.
@@ -160,7 +159,7 @@ def getJunkCodeFunction(junkSize=2):
                 # The following is a utility matrix such that-
                 #   isNextUse[reg][i] = is the next occurrence of reg is the process an instruction that uses reg.
                 # This is useful for determining where a junk instruction that changes reg can be inserted-
-                #   only if the next occurrence is not a use of reg (as opposed to an instruction that only changes reg).
+                # only if the next occurrence is not a use of reg (as opposed to an instruction that only changes reg).
                 registerRange = 14   # testing on x32
                 matrixWidth = len(procInstructions)
                 isNextUse = [[True for __ in range(matrixWidth + 1)] for _ in range(registerRange + 1)]
@@ -302,6 +301,7 @@ def permuteLines(fd: FileData) -> FileData:
             fd.textSegments[tsIdx].processes[procName] = tmpProcInstructions
 
     return fd
+
 
 def applyTechniques(file: str, newLocation: str, techniques: Techniques):
 
