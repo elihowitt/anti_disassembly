@@ -1,0 +1,77 @@
+import tkinter
+from tkinter import *
+from tkinter.filedialog import askopenfilename
+
+def main():
+
+    defaultRemoveStr = 'select file to remove'
+
+    # Refreshes the files dropdown menu.
+    def refreshFiles():
+        varRemove.set(defaultRemoveStr)
+        removeMenue['menu'].delete(0, 'end')
+
+        for file in selectedFiles:
+            removeMenue['menu'].add_command(label=file, command=tkinter._setit(varRemove, file))
+
+    def funcAddFile():
+        location = askopenfilename()
+        if location not in selectedFiles:
+            selectedFiles.add(location)
+            refreshFiles()
+
+    def funcRemoveFile():
+        if varRemove == defaultRemoveStr:
+            return
+        else:
+            selectedFiles.remove(varRemove.get())
+            refreshFiles()
+
+    def funcGenExe():
+        location = txtTarget.get("1.0", 'end-1c')
+        print(location)
+
+    selectedFiles = set([defaultRemoveStr])
+
+    root = Tk()
+    root.title('Nudnik')
+    root.geometry('800x200')
+
+    varFI = IntVar()
+    varJC = IntVar()
+    varPL = IntVar()
+
+    cbFunctionInlining = Checkbutton(root, text="Function Inlining", variable=varFI)
+    cbJunkCode = Checkbutton(root, text="Junk Code", variable=varJC)
+    cbPermuteLines = Checkbutton(root, text="Permute Lines", variable=varPL)
+
+    cbFunctionInlining.place(x=0, y=0)
+    cbJunkCode.place(x=0, y=30)
+    cbPermuteLines.place(x=0, y=60)
+
+    varRemove = StringVar(root)
+    varRemove.set("Select file to remove")
+
+    btnAddFile = Button(root, text="Add file", command=funcAddFile).place(x=200, y=0)
+    btnRemove = Button(root, text="Remove file", command=funcRemoveFile).place(x=200, y=60)
+
+    removeMenue = OptionMenu(root, varRemove, *selectedFiles)
+    removeMenue.place(x=200, y=30)
+
+    txtTarget = Text(root, width = 40, height = 2, bg = "light gray")
+    txtTarget.place(x=420, y=60)
+
+    btnGenExe = Button(root, text="generate executable", command=funcGenExe)
+    btnGenExe.place(x=420, y=30)
+
+    refreshFiles()
+
+
+
+    root.mainloop()
+
+
+
+
+if __name__ =='__main__':
+    main()
