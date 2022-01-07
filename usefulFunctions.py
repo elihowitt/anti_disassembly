@@ -84,8 +84,9 @@ def swapLabels(line, oldName, newName):
 def getJunkInstruction(canChange):
         # Utility function for creating junk instructions that change 'reg' register
 
-        changingCommands = ['mov']
-        changeFlagsPCAZSO = ['add', 'sub', 'xor', 'and', 'or']
+        changingCommands = ['mov', 'xchg']
+        changeFlagsPCAZSO = ['add', 'sub', 'xor', 'and', 'or', 'cmp', 'test']
+        changeFlagsPAZSO_oneArg = ['inc', 'dec']
         # changeMem = ['lea']
 
         # TODO: add support for more intricate instructions (& pass to funct available flags!),-
@@ -93,6 +94,8 @@ def getJunkInstruction(canChange):
 
         registerRange = 7
         flagsRange = 14
+        smallOptionRegisters = [FileData.TextSegment.Instruction.RSP_IDX, FileData.TextSegment.Instruction.RBP_IDX,
+            FileData.TextSegment.Instruction.RSI_IDX, FileData.TextSegment.Instruction.RDI_IDX]
 
 
         # flags = [i for i in canChange if i > registerRange]
@@ -106,6 +109,7 @@ def getJunkInstruction(canChange):
         #     if i == 14:
         #         Mem = False
         # if PCAZSO == 6:
+        probOnearg = 0.15
         if all(flagIdx in canChange
                 for flagIdx in [
                 FileData.TextSegment.Instruction.CF_IDX,
@@ -114,21 +118,54 @@ def getJunkInstruction(canChange):
                 FileData.TextSegment.Instruction.ZF_IDX,
                 FileData.TextSegment.Instruction.SF_IDX,
                 FileData.TextSegment.Instruction.OF_IDX]
-            ):
+            ) and random.random() > probOnearg:
             randCommand = random.choice(changeFlagsPCAZSO)
+        elif all(flagIdx in canChange
+                for flagIdx in [
+                FileData.TextSegment.Instruction.PF_IDX,
+                FileData.TextSegment.Instruction.AF_IDX,
+                FileData.TextSegment.Instruction.ZF_IDX,
+                FileData.TextSegment.Instruction.SF_IDX,
+                FileData.TextSegment.Instruction.OF_IDX]
+            ):
+            randCommand = random.choice(changeFlagsPAZSO_oneArg)
+            reg = random.choice(registers)
 
+            nameCeil = 1 if reg in smallOptionRegisters else 3
+            arg = FileData.TextSegment.Instruction.registerNames[reg][random.randint(0, nameCeil)]
+
+            return [FileData.TextSegment.Instruction(
+                [randCommand, arg])]
         else:
-            randCommand = random.choice(changingCommands)
+            if FileData.TextSegment.Instruction.RSP_IDX not in registers or random.random() > 0.1:
+                if random.random() > 0.7:
+                    return []
+                if random.random() > 0.3:
+                    randCommand = 'mov'
+                else:
+                    randCommand = random.choice(changingCommands)
+
+            else:
+                reg = random.randint(0, registerRange)
+                nameCeil = 1 if reg in smallOptionRegisters else 3
+                arg = FileData.TextSegment.Instruction.registerNames[reg][random.randint(0, nameCeil)]
+
+                if random.random() > 0.5:
+                    return [FileData.TextSegment.Instruction(
+                        ['pop', arg]), FileData.TextSegment.Instruction(
+                        ['push', arg])]
+                else:
+                    return [FileData.TextSegment.Instruction(
+                        ['push', arg]), FileData.TextSegment.Instruction(
+                        ['pop', arg])]
 
         # The probability the second argument will be a number-
         #   theres a preference to use numbers since they wont add 'usage' restriction on the otherwise register.
-        probNum = 0.4
+        probNum = 0.2
 
-        smallOptionRegisters = [FileData.TextSegment.Instruction.RSP_IDX, FileData.TextSegment.Instruction.RBP_IDX,
-            FileData.TextSegment.Instruction.RSI_IDX, FileData.TextSegment.Instruction.RDI_IDX]
 
         if not registers:
-            return FileData.TextSegment.Instruction([])
+            return [FileData.TextSegment.Instruction([])]
         else:
             reg1 = random.choice(registers)
 
@@ -144,8 +181,9 @@ def getJunkInstruction(canChange):
             arg1 = FileData.TextSegment.Instruction.registerNames[reg1][nameIdx]
             arg2 = FileData.TextSegment.Instruction.registerNames[reg2][nameIdx]
 
-        return FileData.TextSegment.Instruction(
-            [randCommand, arg1 + ',', arg2])
+        return [FileData.TextSegment.Instruction(
+            [randCommand, arg1 + ',', arg2])]
+
 
 # Taken from https://stackoverflow.com/questions/15993447/python-data-structure-for-efficient-add-remove-and-random-choice
 class ListDict(object):

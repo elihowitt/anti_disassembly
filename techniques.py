@@ -194,7 +194,10 @@ def getJunkCodeFunction(junkSize=2):
 
                     if regChangeFlag:
                         numJunk = random.randint(0, junkSize)
-                        tmpInstructions.extend([getJunkInstruction(canChange) for _ in range(numJunk)])
+                        instrs = []
+                        for _ in range(numJunk):
+                            instrs += getJunkInstruction(canChange)
+                        tmpInstructions.extend(instrs)
 
                     tmpInstructions.append(ins)  # Adding original instruction
 

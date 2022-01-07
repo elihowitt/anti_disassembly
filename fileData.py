@@ -92,7 +92,7 @@ class FileData:
                         for unit in arg.includes:
                             self.uses[unit] = True
 
-                    elif ins == 'inc':
+                    elif ins == 'inc' or ins == 'dec':
                         self.changes[self.PF_IDX] = True
                         self.changes[self.AF_IDX] = True
                         self.changes[self.ZF_IDX] = True
