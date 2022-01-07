@@ -1,6 +1,9 @@
 import tkinter
 from tkinter import *
 from tkinter.filedialog import askopenfilename
+import os
+from techniques import *
+import asm_parser
 
 def main():
 
@@ -28,6 +31,29 @@ def main():
             refreshFiles()
 
     def funcGenExe():
+        # for vs 2022
+        os.system("C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars32.bat")
+        os.system("cl /FA " + ' '.join(selectedFiles))
+
+        techniques = Techniques(applies_functionInlining=varFI, applies_junkCode=varJC, applies_permuteLines=varPL)
+
+        newLocations =[]
+        for i in selectedFiles:
+            location = i[:]
+            newLocation = i.removesuffix('.asm') + "AD.asm"
+            newLocations += [newLocation]
+            asm_parser.applyTechniques(location, newLocation, techniques)
+
+
+        os.system("ml /c " + ' '.join(newLocations))
+        newLocationsOBJ = []
+        for i in newLocations[:]:
+            newLocation = i.removesuffix('.asm') + ".obj"
+            newLocationsOBJ += [newLocation]
+
+        name = "junky.exe" #############################################  make better way change name
+        os.system("link /FORCE:MULTIPLE /OUT:" + name + ' '.join(newLocationsOBJ))
+
         location = txtTarget.get("1.0", 'end-1c')
         print(location)
 
