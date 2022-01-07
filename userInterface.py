@@ -3,7 +3,6 @@ from tkinter import *
 from tkinter.filedialog import askopenfilename
 import os
 from techniques import *
-import asm_parser
 
 def main():
 
@@ -42,7 +41,7 @@ def main():
             location = i[:]
             newLocation = i.removesuffix('.asm') + "AD.asm"
             newLocations += [newLocation]
-            asm_parser.applyTechniques(location, newLocation, techniques)
+            applyTechniques(location, newLocation, techniques)
 
 
         os.system("ml /c " + ' '.join(newLocations))

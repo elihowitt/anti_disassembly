@@ -303,3 +303,18 @@ def permuteLines(fd: FileData) -> FileData:
 
     return fd
 
+def applyTechniques(file: str, newLocation: str, techniques: Techniques):
+
+    """
+        Function to apply given techniques to a file and save the result.
+
+        arg 'file': the location of the file to which to apply the techniques
+        arg 'newLocation': the location to which to save the resulting file
+        arg 'techniques': instance of 'Techniques' object specifying which techniques to apply
+    """
+
+    fd = FileData(file)
+    for technique in techniques.techniqueFunctions:
+        fd = technique(fd)
+
+    fd.saveFile(newLocation)
