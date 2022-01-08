@@ -1,4 +1,3 @@
-
 import random
 from fileData import *
 
@@ -81,34 +80,22 @@ def swapLabels(line, oldName, newName):
 
     return line
 
+
 def getJunkInstruction(canChange):
         # Utility function for creating junk instructions that change 'reg' register
 
-        changingCommands = ['mov', 'xchg']
         changeFlagsPCAZSO = ['add', 'sub', 'xor', 'and', 'or', 'cmp', 'test']
         changeFlagsPAZSO_oneArg = ['inc', 'dec']
-        # changeMem = ['lea']
 
         # TODO: add support for more intricate instructions (& pass to funct available flags!),-
         #  and pointer type arguments.
 
         registerRange = 7
-        flagsRange = 14
         smallOptionRegisters = [FileData.TextSegment.Instruction.RSP_IDX, FileData.TextSegment.Instruction.RBP_IDX,
             FileData.TextSegment.Instruction.RSI_IDX, FileData.TextSegment.Instruction.RDI_IDX]
 
-
-        # flags = [i for i in canChange if i > registerRange]
         registers = [i for i in canChange if i <= registerRange]
 
-        # PCAZSO =  0
-        # Mem = True
-        # for i in flags:
-        #     if i > 7 and i < 14:
-        #         PCAZSO += 1
-        #     if i == 14:
-        #         Mem = False
-        # if PCAZSO == 6:
         probOnearg = 0.15
         if all(flagIdx in canChange
                 for flagIdx in [
@@ -137,27 +124,29 @@ def getJunkInstruction(canChange):
             return [FileData.TextSegment.Instruction(
                 [randCommand, arg])]
         else:
+            probNothing = 0.2   # probability that nothing will be inserted whatsoever
+            probMov = 0.7       # probability that 'mov' command will be used
             if FileData.TextSegment.Instruction.RSP_IDX not in registers or random.random() > 0.1:
-                if random.random() > 0.7:
+                if random.random() < probNothing:
                     return []
-                if random.random() > 0.3:
+                if random.random() < probNothing + probMov:
                     randCommand = 'mov'
                 else:
-                    randCommand = random.choice(changingCommands)
+                    if len(registers) > 1:
+                        reg1, reg2 = random.sample(registers, 2)
+                        arg1 = FileData.TextSegment.Instruction.registerNames[reg1][0]
+                        arg2 = FileData.TextSegment.Instruction.registerNames[reg2][0]
+                        randCommand = 'xchg'
+                    else:
+                        return []
 
             else:
                 reg = random.randint(0, registerRange)
-                nameCeil = 1 if reg in smallOptionRegisters else 3
-                arg = FileData.TextSegment.Instruction.registerNames[reg][random.randint(0, nameCeil)]
+                arg = FileData.TextSegment.Instruction.registerNames[reg][0]
 
-                if random.random() > 0.5:
-                    return [FileData.TextSegment.Instruction(
-                        ['pop', arg]), FileData.TextSegment.Instruction(
-                        ['push', arg])]
-                else:
-                    return [FileData.TextSegment.Instruction(
-                        ['push', arg]), FileData.TextSegment.Instruction(
-                        ['pop', arg])]
+                return [FileData.TextSegment.Instruction(
+                    ['push', arg]), FileData.TextSegment.Instruction(
+                    ['pop', arg])]
 
         # The probability the second argument will be a number-
         #   theres a preference to use numbers since they wont add 'usage' restriction on the otherwise register.
@@ -175,8 +164,12 @@ def getJunkInstruction(canChange):
             arg2 = str(random.randint(-64, 64))
 
         else:
-            reg2 = random.randint(0, registerRange)
-            nameCeil = 1 if any(reg in smallOptionRegisters for reg in [reg1, reg2]) else 3
+
+            reg2 = random.randint(0, registerRange) if reg1 not in smallOptionRegisters else \
+                random.choice(smallOptionRegisters)
+
+            nameCeil = 1 if (reg1 in smallOptionRegisters or reg2 in smallOptionRegisters) else 3
+
             nameIdx = random.randint(0, nameCeil)   # Must be same across both registers to match argument size
             arg1 = FileData.TextSegment.Instruction.registerNames[reg1][nameIdx]
             arg2 = FileData.TextSegment.Instruction.registerNames[reg2][nameIdx]

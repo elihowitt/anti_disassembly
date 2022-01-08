@@ -260,45 +260,28 @@ class FileData:
             RBP_IDX = 6
             RSP_IDX = 7
 
-            # 64 bit version ):
-            # R8_IDX = 8
-            # R9_IDX = 9
-            # R10_IDX = 10
-            # R11_IDX = 11
-            # R12_IDX = 12
-            # R13_IDX = 13
-            # R14_IDX = 14
-            # R15_IDX = 15
-
             # Flag bits indices:
-            CF_IDX = 8  # 16
-            PF_IDX = 9  # 17
-            AF_IDX = 10  # 18
-            ZF_IDX = 11  # 19
-            SF_IDX = 12  # 20
-            OF_IDX = 13  # 21
+            CF_IDX = 8
+            PF_IDX = 9
+            AF_IDX = 10
+            ZF_IDX = 11
+            SF_IDX = 12
+            OF_IDX = 13
 
-            # Memory (stack)
-            MEM = 14  # 22
+            # Memory
+            MEM = 14
 
             # Dictionary mapping register index to portion names:
             registerNames = dict()
-            registerNames[RAX_IDX] =   ['eax', 'ax', 'ah', 'al']    #'''['rax','''
-            registerNames[RBX_IDX] =   ['ebx', 'bx', 'bh', 'bl']    #'''['rbx','''
-            registerNames[RCX_IDX] =   ['ecx', 'cx', 'ch', 'cl']    #'''['rcx','''
-            registerNames[RDX_IDX] =   ['edx', 'dx', 'dh', 'dl']    #'''['rdx','''
-            registerNames[RSI_IDX] =   ['esi', 'si']                #''', 'sil']    ['rsi','''
-            registerNames[RDI_IDX] =   ['edi', 'di']                #''', 'dil']    ['rdi','''
-            registerNames[RBP_IDX] =   ['ebp', 'bp']                #''', 'bpl']    ['rbp','''
-            registerNames[RSP_IDX] =   ['esp', 'sp']                #''', 'spl']    ['rsp','''
-            # registerNames[R8_IDX] = ['r8', 'r8d', 'r8w', 'r8b']
-            # registerNames[R9_IDX] = ['r9', 'r9d', 'r9w', 'r9b']
-            # registerNames[R10_IDX] = ['r10', 'r10d', 'r10w', 'r10b']
-            # registerNames[R11_IDX] = ['r11', 'r11d', 'r11w', 'r11b']
-            # registerNames[R12_IDX] = ['r12', 'r12d', 'r12w', 'r12b']
-            # registerNames[R13_IDX] = ['r13', 'r13d', 'r13w', 'r13b']
-            # registerNames[R14_IDX] = ['r14', 'r14d', 'r14w', 'r14b']
-            # registerNames[R15_IDX] = ['r15', 'r15d', 'r15w', 'r15b']
+            registerNames[RAX_IDX] =   ['eax', 'ax', 'ah', 'al']
+            registerNames[RBX_IDX] =   ['ebx', 'bx', 'bh', 'bl']
+            registerNames[RCX_IDX] =   ['ecx', 'cx', 'ch', 'cl']
+            registerNames[RDX_IDX] =   ['edx', 'dx', 'dh', 'dl']
+            registerNames[RSI_IDX] =   ['esi', 'si']
+            registerNames[RDI_IDX] =   ['edi', 'di']
+            registerNames[RBP_IDX] =   ['ebp', 'bp']
+            registerNames[RSP_IDX] =   ['esp', 'sp']
+
 
             # Dictionary mapping name of portion of register to register index:
             registerIndex = dict()

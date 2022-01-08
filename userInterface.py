@@ -1,12 +1,9 @@
 import tkinter
 from tkinter import *
 from tkinter.filedialog import askopenfilename
-import os
 from techniques import *
 
 def main():
-
-    defaultRemoveStr = 'select file to remove'
 
     # Refreshes the files dropdown menu.
     def refreshFiles():
@@ -29,39 +26,28 @@ def main():
             selectedFiles.remove(varRemove.get())
             refreshFiles()
 
-    def funcGenExe():
-        # for vs 2022
-        os.system("C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars32.bat")
-        os.system("cl /FA " + ' '.join(selectedFiles))
+    def funcGenerate():
+        if defaultRemoveStr in selectedFiles:
+            selectedFiles.remove(defaultRemoveStr)
 
-        techniques = Techniques(applies_functionInlining=varFI, applies_junkCode=varJC, applies_permuteLines=varPL)
+        outLocation = txtTarget.get("1.0", 'end-1c')
 
-        newLocations =[]
-        for i in selectedFiles:
-            location = i[:]
-            newLocation = i.removesuffix('.asm') + "AD.asm"
-            newLocations += [newLocation]
-            applyTechniques(location, newLocation, techniques)
+        techniques = Techniques(applies_functionInlining=varFI.get(),
+                                applies_junkCode=varJC.get(), applies_permuteLines=varPL.get())
 
+        for file in selectedFiles:
+            filename = file[file.rfind('/')+1: file.rfind('.asm')]
+            newLocation = outLocation + '\\\\' + filename + '_nudnik.asm'
+            applyTechniques(file, newLocation, techniques)
 
-        os.system("ml /c " + ' '.join(newLocations))
-        newLocationsOBJ = []
-        for i in newLocations[:]:
-            newLocation = i.removesuffix('.asm') + ".obj"
-            newLocationsOBJ += [newLocation]
-
-        name = "junky.exe" #############################################  make better way change name
-        os.system("link /FORCE:MULTIPLE /OUT:" + name + ' '.join(newLocationsOBJ))
-
-        location = txtTarget.get("1.0", 'end-1c')
-        print(location)
-
+    defaultRemoveStr = 'select file to remove'
     selectedFiles = set([defaultRemoveStr])
 
     root = Tk()
     root.title('Nudnik')
     root.geometry('800x200')
 
+    # Variables regarding which techniques to implement
     varFI = IntVar()
     varJC = IntVar()
     varPL = IntVar()
@@ -77,21 +63,21 @@ def main():
     varRemove = StringVar(root)
     varRemove.set("Select file to remove")
 
-    btnAddFile = Button(root, text="Add file", command=funcAddFile).place(x=200, y=0)
-    btnRemove = Button(root, text="Remove file", command=funcRemoveFile).place(x=200, y=60)
-
+    btnAddFile = Button(root, text="Add file", command=funcAddFile)
     removeMenue = OptionMenu(root, varRemove, *selectedFiles)
+    btnRemove = Button(root, text="Remove file", command=funcRemoveFile)
+
+    btnAddFile.place(x=200, y=0)
     removeMenue.place(x=200, y=30)
+    btnRemove.place(x=200, y=60)
 
     txtTarget = Text(root, width = 40, height = 2, bg = "light gray")
     txtTarget.place(x=420, y=60)
 
-    btnGenExe = Button(root, text="generate executable", command=funcGenExe)
+    btnGenExe = Button(root, text="Generate files", command=funcGenerate)
     btnGenExe.place(x=420, y=30)
 
     refreshFiles()
-
-
 
     root.mainloop()
 

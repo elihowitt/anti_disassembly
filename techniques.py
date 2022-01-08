@@ -1,9 +1,4 @@
-import random
-from typing import List, Dict       # Used for type hinting
-import copy                         # Used for non reference copies (shallow & deep)
-from fileData import *
 from usefulFunctions import *
-
 
 class Techniques:
     """
@@ -302,6 +297,7 @@ def permuteLines(fd: FileData) -> FileData:
             fd.textSegments[tsIdx].processes[procName] = tmpProcInstructions
 
     return fd
+
 
 def applyTechniques(file: str, newLocation: str, techniques: Techniques):
 
