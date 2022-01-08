@@ -137,6 +137,7 @@ def getJunkInstruction(canChange):
                         arg1 = FileData.TextSegment.Instruction.registerNames[reg1][0]
                         arg2 = FileData.TextSegment.Instruction.registerNames[reg2][0]
                         randCommand = 'xchg'
+                        return[randCommand, arg1+',', arg2]
                     else:
                         return []
 
