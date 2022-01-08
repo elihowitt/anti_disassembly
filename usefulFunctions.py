@@ -137,17 +137,13 @@ def getJunkInstruction(canChange):
                         arg1 = FileData.TextSegment.Instruction.registerNames[reg1][0]
                         arg2 = FileData.TextSegment.Instruction.registerNames[reg2][0]
                         randCommand = 'xchg'
-                        return[randCommand, arg1+',', arg2]
+                        return[FileData.TextSegment.Instruction([randCommand, arg1+',', arg2])]
+                        #return[randCommand, arg1+',', arg2]
                     else:
                         return []
 
             else:
-                reg = random.randint(0, registerRange)
-                arg = FileData.TextSegment.Instruction.registerNames[reg][0]
-
-                return [FileData.TextSegment.Instruction(
-                    ['push', arg]), FileData.TextSegment.Instruction(
-                    ['pop', arg])]
+                return []
 
         # The probability the second argument will be a number-
         #   theres a preference to use numbers since they wont add 'usage' restriction on the otherwise register.
